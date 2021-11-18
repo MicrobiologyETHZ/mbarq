@@ -1,0 +1,14 @@
+name: tnseq2
+channels:
+  - defaults
+  - bioconda
+  - conda-forge
+dependencies:
+  - python==3.8.*
+  - blast==2.9.*
+  - bedtools==2.30.*
+  - pytest
+  - click
+  - pip
+#  - pip:
+#      - git+https://github.com/MicrobiologyETHZ/nccr_tnseq2#egg=tnseq2
