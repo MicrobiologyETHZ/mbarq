@@ -41,7 +41,7 @@ class Barcode:
         self.chr: Optional[str] = None
         self.strand: Optional[str] = None
         self.multimap: Optional[bool] = None
-        self.identifiers: List[str]
+        self.identifiers: Optional[List[str]] = None
         self._parse_structure()
 
     def _parse_structure(self):
@@ -107,9 +107,9 @@ class Barcode:
 
 
 class BarSeqData:
-    def __init__(self, sequencing_file: str, annotation_file: Optional[str] = None, ) -> None:
+    def __init__(self, sequencing_file: str, annotation_file: str = '', ) -> None:
         self.seq_file = sequencing_file
-        self.annotations = annotation_file
+        self.annotations = Path(annotation_file)
         self.barcodes: List[Barcode] = []
 
     def validate_input(self) -> None:

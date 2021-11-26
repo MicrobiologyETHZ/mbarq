@@ -422,3 +422,5 @@ buildNumber.properties
 # added by Anna for general purposes :)
 
 *data*
+*/expected_outcomes
+*/test_files
