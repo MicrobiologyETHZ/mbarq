@@ -76,14 +76,17 @@ def main():
 @click.option('--name', '-n', default='', help='unique library name, '
                                                'by default will try to use FASTQ filename', metavar='STR')
 @click.option('--transposon', '-tn',
-              default="GTGTATAAGAGACAG:17:13:before",
+              default="B17N13GTGTATAAGAGACAG",
               help="""\b
-                     transposon construct structure: 1:2:3:4, where
-                       1. transposon sequence [GTGTATAAGAGACAG]
-                       2. barcode length [17]
-                       3. length of spacer between barcode and transposon sequence [13]
-                       4. barcode position relative to transposon sequence [before]
-                     [GTGTATAAGAGACAG:17:13:before]
+                     transposon construct structure, consisting of the following:
+                       1. conserved transposon sequence, eg. GTGTATAAGAGACAG
+                       2. barcode length, written as B[# of nt], eg. B17
+                       3. if there are extra nucleotides between barcode and 
+                          transposon sequence, indicate with N[# of nt], eg. N13
+                    Note: relative position of barcode and transpson matters, 
+                    the default represents the following construct:
+                    ---|BARCODE (17 nt)|--spacer (13 nt)--|GTGTATAAGAGACAG|---HOST--
+                     [B17N13GTGTATAAGAGACAG]
               
                    """, metavar='STR')
 @click.option('--out_dir', '-o', default='.', help='output directory [.]', metavar="DIR")
