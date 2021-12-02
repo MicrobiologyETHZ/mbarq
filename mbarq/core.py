@@ -154,8 +154,8 @@ class BarSeqData:
             returncode: int = subprocess.check_call(command, shell=True)
         except subprocess.CalledProcessError as e:
             raise Exception(e)
-        if returncode != 0:
-            raise (Exception(f'Command: {command} failed with return code {returncode}'))
+        #if returncode != 0:
+            #raise (Exception(f'Command: {command} failed with return code {returncode}'))
         return returncode
 
     def __repr__(self) -> str:

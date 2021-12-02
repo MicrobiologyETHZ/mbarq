@@ -2,19 +2,21 @@ import logging
 import collections
 import os
 from typing import Optional, List
-from mbarq.core import Barcode, BarSeqData, InputFileError
+from mbarq.core import Barcode, BarSeqData
 from pathlib import Path
 import pandas as pd
 import sys
 from mbarq.mbarq_logger import get_logger
 
+
 class Mapper(BarSeqData):
 
-    def __init__(self, sequencing_file: str, barcode_structure: str, name: str ='',
-                 genome: Optional[str] = None, db: Optional[str] = None,
+    def __init__(self, sequencing_file: str, barcode_structure: str, name: str = '',
+                 genome: str = '', db: str = '',
                  annotation_file: str = '',
                  identifiers: Optional[List[str]] = None,
-                 output_dir: str = "."
+                 output_dir: str = ".",
+                 edit_distance: int = 3
                  ) -> None:
         super().__init__(sequencing_file, annotation_file)
         self.identifiers = identifiers
@@ -30,12 +32,12 @@ class Mapper(BarSeqData):
         self.temp_blastn_file = self.output_dir / f"{self.name}.blastn"
         self.map_file: Path = self.output_dir / f"{self.name}.map.csv"
         self.blast_columns: str = "qseqid sseqid pident length qstart qend sstart send evalue bitscore qseq sstrand"
-        self.positions: Optional[pd.DataFrame] = None
+        self.positions: pd.DataFrame = pd.DataFrame()
         self.annotated_positions: pd.DataFrame = pd.DataFrame()
-        self.edit_distance: int = 3
-        self.logger = get_logger('Mapping_Log', self.output_dir/f"{self.name}_mapping.log")
-        self.logger.info("Initializing Mapper")
+        self.edit_distance: int = edit_distance
+        self.logger = get_logger('mapping-log', self.output_dir / f"{self.name}_mapping.log")
         self.validate_input()
+        self.logger.info("Initializing Mapper")
 
     def validate_input(self) -> None:
         if not self.blastdb and not self.genome:
@@ -46,8 +48,8 @@ class Mapper(BarSeqData):
             sys.exit(1)
 
     def extract_barcodes(self, min_host_bases: int = 20) -> None:
+        self.logger.info('------------------')
         self.logger.info("Extracting Barcodes")
-        # todo Add logging back
         total_inserts: int = 0
         inserts_with_tp2: int = 0
         inserts_without_tp2: int = 0
@@ -72,8 +74,24 @@ class Mapper(BarSeqData):
             else:
                 inserts_without_tp2 += 1
         self.logger.info('Finished Extraction')
+        self.logger.info(f'Processed {total_inserts} reads')
+        self.logger.info(f'\tTotal inserts:\t{total_inserts}\t100.0%')
+        self.logger.info(f'\tInserts w transposon:\t{inserts_with_tp2}\t'
+                         f'{int(100 * ((inserts_with_tp2 * 100.0) / total_inserts)) / 100.0}%')
+        self.logger.info(f'\t\tand w barcode:\t{inserts_with_tp2_with_good_bc}\t'
+                         f'{int(100 * ((inserts_with_tp2_with_good_bc * 100.0) / total_inserts)) / 100.0}%')
+        self.logger.info(f'\t\t\tand good host sequence:\t{len(self.barcodes)}\t'
+                         f'{int(100 * ((len(self.barcodes) * 100.0) / total_inserts)) / 100.0}'
+                         f'% --> Used for downstream analysis')
+        self.logger.info(f'\t\t\tand short host sequence:\t{inserts_with_tp2_with_good_bc_short_host}\t'
+                         f'{int(100 * ((inserts_with_tp2_with_good_bc_short_host * 100.0) / total_inserts)) / 100.0}%')
+        self.logger.info(f'\t\tand w/o barcode:\t{inserts_with_tp2_but_short_bc}\t'
+                         f'{int(100 * ((inserts_with_tp2_but_short_bc * 100.0) / total_inserts)) / 100.0}%')
+        self.logger.info(f'\tInserts w/o transposon:\t{inserts_without_tp2}\t'
+                         f'{int(100 * ((inserts_without_tp2 * 100.0) / total_inserts)) / 100.0}%')
 
     def _dereplicate_barcodes(self):
+        self.logger.info('------------------')
         self.logger.info("Dereplicating barcodes")
         barcode_2_sequences = collections.defaultdict(list)
         for barcode in self.barcodes:
@@ -87,6 +105,8 @@ class Mapper(BarSeqData):
                 yield barcode
 
     def _write_barcodes_to_fasta(self):
+        self.logger.info('------------------')
+        self.logger.info('Writing dereplicated barcodes to file')
         with open(self.temp_fasta_file, 'w') as handle:
             tot = 1
             for barcode in self._dereplicate_barcodes():
@@ -107,24 +127,28 @@ class Mapper(BarSeqData):
 
          """
         db_return_code = 0
-        print(self.blastdb)
+        self.logger.info('------------------')
+        self.logger.info('Running BLAST on barcode-associated host sequences')
         if not self.blastdb:
             command0 = f'makeblastdb -in {self.genome} -dbtype nucl'
-            logging.info('No blastdb provided, generating blast db from genome.')
-            logging.info(f"Blast command:\t{command0}")
+            self.logger.info('No BLAST DB provided, generating BLAST DB from reference genome.')
+            self.logger.info(f"Blast command:\t{command0}")
             db_return_code = self.check_call(command0)
             if db_return_code != 0:
-                raise Exception(f"Failed to create blast DB from {self.genome}. "
-                                f"Return code: {db_return_code}")
+                self.logger.error(f"Failed to create blast DB from {self.genome}. "
+                                  f"Return code: {db_return_code}")
+                sys.exit(1)
             self.blastdb = self.genome
-        command = f'blastn -task blastn -db {self.blastdb} -out {self.temp_blastn_file} -query {self.temp_fasta_file} ' \
+        command = f'blastn -task blastn -db {self.blastdb} -out {self.temp_blastn_file} ' \
+                  f'-query {self.temp_fasta_file} ' \
                   f'-outfmt "6 {self.blast_columns}" ' \
                   f'-num_threads {blast_threads}'
-        logging.info(f'Blastn command:\t{command}')
+        self.logger.info(f'blastn command:\t{command}')
         blast_return_code = self.check_call(command)
         if blast_return_code != 0:
-            raise Exception(f"BLASTN failed. "
-                            f"Return code: {db_return_code}")
+            self.logger.error(f"blastn failed. "
+                              f"Return code: {db_return_code}")
+            sys.exit(1)
 
     def _find_most_likely_positions(self, filter_below) -> None:
         """
@@ -134,6 +158,8 @@ class Mapper(BarSeqData):
          :param: logger
          :return: pd.DataFrame
          """
+        self.logger.info('------------------')
+        self.logger.info('Filtering blast results to find barcode positions')
         df = pd.read_table(self.temp_blastn_file, header=None)
         df.columns = self.blast_columns.split()
         # Filter out spurious hits
@@ -150,8 +176,12 @@ class Mapper(BarSeqData):
         total_count = best_hits.groupby('barcode').cnt.sum().reset_index()
         total_count.columns = ['barcode', 'total_count']
         best_hits = best_hits.merge(total_count, how='left', on='barcode')
-        best_hits = best_hits[best_hits.cnt > filter_below]  # todo should be 100 or optional
-        logging.info(f"Number of barcodes: {best_hits.barcode.nunique()}")
+        self.logger.info(f"Filtering out barcodes supported by less than {filter_below} reads")
+        best_hits = best_hits[best_hits.cnt > filter_below]
+        self.logger.info(f"Number of barcodes found: {best_hits.barcode.nunique()}")
+        if best_hits.barcode.nunique() == 0:
+            self.logger.error('No mapped barcodes found. Try lowering the filter_below cutoff')
+            sys.exit(1)
         # Create best hits data frame by merging best_hits with other columns from blast file
         # There still could be multiple hits for each qseqid, if they have the same blast score
         query_best_hits = best_hits.merge(df, how='left', on=['qseqid', 'bitscore'])
@@ -167,16 +197,19 @@ class Mapper(BarSeqData):
         query_best_hits.drop('rank', axis=1, inplace=True)
         self.positions = query_best_hits
 
+
     def _merge_colliding_barcodes(self) -> None:
+
         """
         Takes data frame of positions, and merges colliding barcodes
         """
-
+        self.logger.info('------------------')
+        self.logger.info(f'Merging barcodes with edit distance of less than {self.edit_distance} mapped to '
+                         f'the same positions (+/- 5 nt)')
         pps = self.positions[['sseqid', 'sstart', 'sstrand', 'barcode', 'total_count', 'multimap']]
         if pps.empty:
-            print('No barcodes/positions found. Look at filter_below cutoff')
+            self.logger.error('No mapped barcodes found. Try lowering the filter_below cutoff')
             sys.exit(1)
-
         positions_sorted = (pps.groupby('sseqid')
                             .apply(pd.DataFrame.sort_values, 'sstart')
                             .drop(['sseqid'], axis=1)
@@ -237,6 +270,11 @@ class Mapper(BarSeqData):
                                                     'multimap'])
         self.positions = pd.concat([unique, resolved_collisions])[['barcode', 'total_count', 'sstart',
                                                                    'sseqid', 'sstrand', 'multimap']]
+        self.logger.info('------------------')
+        self.logger.info("Finished mapping barcodes")
+        self.logger.info(f"Final number of barcodes found: {self.positions.barcode.nunique()}")
+        self.logger.info(f"Mean number of reads per barcode: {self.positions.total_count.mean()}")
+        self.logger.info(f"Number of barcodes mapping to multiple locations: {self.positions.multimap.sum()}")
 
     def _find_annotation_overlaps(self):
 
@@ -250,6 +288,8 @@ class Mapper(BarSeqData):
         :param output_map: tab file with the following columns: chr | sstart | gff-info-field | barcode
         :return: bedtoosl intersect return code
         """
+        self.logger.info('------------------')
+        self.logger.info('Annotating mapped barcodes. Only annotating barcodes inside/overlapping features of interest')
         assert self.annotations is not None
         bed_map = self.positions.copy().reset_index()
         bed_map['startOffBy1'] = bed_map['sstart'] - 1
@@ -257,12 +297,14 @@ class Mapper(BarSeqData):
                                                                        header=False)
         command = f"bedtools intersect -wb -a {self.annotations} -b {self.temp_bed_file} " \
                   f"|cut -f1,3,5,9,13 > {self.temp_bed_results_file}"
+        self.logger.info(f'bedtools command: {command}')
         return_code = self.check_call(command)
         if return_code != 0:
-            raise Exception(f"Failed to run bedtools. "
+            self.logger.error(f"Failed to run bedtools. "
                             f"Return code: {return_code}")
+            sys.exit(1)
         else:
-            print('Bedtools finished')
+            self.logger.info('Finished finding overlaps between barcodes and features')
             # todo leave this file, it turned out to be useful for SATAY
             #  -> if want to summarize over different intervals
             # os.remove(self.temp_bed_file)
@@ -270,7 +312,9 @@ class Mapper(BarSeqData):
     def _find_closest_feature(self):
         """
         """
-        assert self.annotations
+        assert self.annotations # todo does this actually do anything?
+        self.logger.info('------------------')
+        self.logger.info('Annotating mapped barcodes. Finding closest feature for each barcode')
         bed_map = self.positions.copy().reset_index()
         bed_map['startOffBy1'] = bed_map['sstart'] - 1
         bed_map[['sseqid', 'startOffBy1', 'sstart', 'barcode']].to_csv(self.temp_bed_file, sep='\t', index=False,
@@ -281,20 +325,22 @@ class Mapper(BarSeqData):
                   f"bedtools sort -i {self.annotations} |grep ID=gene > {tmp_annotations};" \
                   f"bedtools closest -a {tmp_annotations} -b {tmp_bed} -d " \
                   f"|cut -f1,3,5,9,13,14 > {self.temp_bed_closest_file}"
+        self.logger.info(f'Bedtools command: {command}')
         return_code = self.check_call(command)
         if return_code != 0:
-            raise Exception(f"Failed to run bedtools. "
-                            f"Return code: {return_code}")
+            self.logger.error(f"Failed to run bedtools. "
+                              f"Return code: {return_code}")
+            sys.exit(1)
         else:
-            print('Bedtools closest finished')
+            self.logger.info('Finished finding features close to or overlapping barcodes')
             os.remove(tmp_bed)
             os.remove(tmp_annotations)
             # os.remove(self.temp_bed_file)
 
     def _add_bedintersect_results_to_positions(self, feature_type, intersect=True):
-        '''
+        """
         takes output_map file produced by _find_annotation_overlaps and merges it with barcode map on barcode
-        '''
+        """
         assert self.identifiers is not None
         if intersect:
             antd_positions = pd.read_table(self.temp_bed_results_file, header=None)
@@ -311,8 +357,8 @@ class Mapper(BarSeqData):
                 return df[df['distance_to_feature'] == minv]
 
             antd_positions = (antd_positions.groupby('barcode')
-                                            .apply(get_all_genes_with_min_distance)
-                                            .drop(['barcode'], axis=1).reset_index())
+                              .apply(get_all_genes_with_min_distance)
+                              .drop(['barcode'], axis=1).reset_index())
 
         for feat in self.identifiers:
             pattern = f'({feat}=.+?;|{feat}=.+?$)'
@@ -320,10 +366,12 @@ class Mapper(BarSeqData):
                                     .str.extract(pattern, expand=False)
                                     .str.replace(f'{feat}=', '')
                                     .str.strip(';'))
+            if antd_positions[feat].isna().all():
+                self.logger.warning(f'"{feat}" identifier not found')
         antd_positions = antd_positions[list(self.identifiers) + ['barcode', 'distance_to_feature']]
         self.annotated_positions = (self.positions.copy()
                                     .merge(antd_positions, how='left', on='barcode'))
-        #os.remove(self.temp_bed_results_file)
+        # os.remove(self.temp_bed_results_file)
 
     def map_insertions(self, min_host_bases=20, filter_below=100):
         self.extract_barcodes(min_host_bases=min_host_bases)
@@ -333,7 +381,7 @@ class Mapper(BarSeqData):
         self._merge_colliding_barcodes()
 
     def annotate(self, annotations_file, intersect=True, feature_type='gene', identifiers=('Name', 'locus_tag')):
-        assert type(self.positions) == pd.DataFrame
+        assert not self.positions.empty
         self.annotations = Path(annotations_file)
         self.identifiers = identifiers
         if intersect:
@@ -343,9 +391,12 @@ class Mapper(BarSeqData):
         self._add_bedintersect_results_to_positions(feature_type, intersect)
 
     def write_mapfile(self):
+        rename_dict = {'sstart': 'insertion_site',
+                       'sseqid': 'chr',
+                       'sstrand': 'strand',
+                       'total_count': 'number_of_reads'}
+        self.positions = self.positions.rename(rename_dict, axis=1)
         self.positions.to_csv(self.map_file)
         if not self.annotated_positions.empty:
+            self.annotated_positions = self.annotated_positions.rename(rename_dict, axis=1)
             self.annotated_positions.to_csv(self.map_file.with_suffix('.annotated.csv'), index=False)
-
-
-

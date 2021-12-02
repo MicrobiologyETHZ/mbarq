@@ -13,7 +13,7 @@ def get_console_handler():
 
 
 def get_file_handler(log_file):
-    file_handler = logging.FileHandler(log_file)
+    file_handler = logging.FileHandler(log_file, mode='w')
     file_handler.setFormatter(FILE_FORMAT)
     file_handler.setLevel(logging.INFO)
     return file_handler

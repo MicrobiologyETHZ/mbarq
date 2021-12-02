@@ -5,12 +5,37 @@ import click
 import sys
 import logging
 
+
+class DefaultHelp(click.Command):
+    def __init__(self, *args, **kwargs):
+        context_settings = kwargs.setdefault('context_settings', {})
+        if 'help_option_names' not in context_settings:
+            context_settings['help_option_names'] = ['-h', '--help']
+        self.help_flag = context_settings['help_option_names'][0]
+        super(DefaultHelp, self).__init__(*args, **kwargs)
+
+    def parse_args(self, ctx, args):
+        if not args:
+            args = [self.help_flag]
+        return super(DefaultHelp, self).parse_args(ctx, args)
+
+
+
 from mbarq.mapper import Mapper
 
 
-@click.group()
+@click.group(options_metavar='', subcommand_metavar='<command> [options]', invoke_without_command=False)
 def main():
-    pass
+    """
+    \b
+    Program: mbarq - a tool for analysis of barcode mutagenesis data
+    Version: 1.0.0
+    Reference:
+
+    Type motus <command> to print the help for a specific command
+
+    """
+
 
 #
 # # DEMUX
@@ -42,34 +67,44 @@ def main():
 
 
 # MAP
-@main.command(short_help="map barcodes to reference genome")
-@click.option('--forward', '-f', help='Forward Reads')
-@click.option('--gff', '-a', default='', help='Annotation File in gff format. '
-                                              'The tool will extract Name and locus_tag from gene features')
-@click.option('--genome', '-g', help='Reference genome (FASTA)')
-@click.option('--name', '-n', default='', help='Unique library name')
-@click.option('--out_dir', '-o', default='.', help='Output directory')
+@main.command(cls=DefaultHelp, short_help="\tmap barcodes to reference genome", options_metavar='<options>')
+@click.option('--forward', '-f', required=True,
+              help='input file for reads in forward orientation; FASTQ formatted; gz is ok.',
+              metavar='FILE')
+@click.option('--genome', '-g', required=True, help='reference genome in FASTA format', metavar='FILE')
+@click.option('--gff', '-a', default='', help='annotation file in gff format', metavar='FILE')
+@click.option('--name', '-n', default='', help='unique library name, '
+                                               'by default will try to use FASTQ filename', metavar='STR')
+@click.option('--transposon', '-tn',
+              default="GTGTATAAGAGACAG:17:13:before",
+              help="""\b
+                     transposon construct structure: 1:2:3:4, where
+                       1. transposon sequence [GTGTATAAGAGACAG]
+                       2. barcode length [17]
+                       3. length of spacer between barcode and transposon sequence [13]
+                       4. barcode position relative to transposon sequence [before]
+                     [GTGTATAAGAGACAG:17:13:before]
+              
+                   """, metavar='STR')
+@click.option('--out_dir', '-o', default='.', help='output directory [.]', metavar="DIR")
 @click.option('--filter_low_counts', '-l', default=0,
-              help='Filter out barcodes supported by [int] or less reads. Default: [100]')
+              help='filter out barcodes supported by [INT] or less reads [0]', metavar="INT")
 #@click.option('--blast_threads', '-t', default=4, help='Blast Threads')
-@click.option('--transposon', '-tn', default="GTGTATAAGAGACAG:17:13:before", help='Construct Structure:\n\n'
-                                                                                  'TN sequence:BC length:length of '
-                                                                                  'spacer between BC and TN '
-                                                                                  'sequence:BC position relative to '
-                                                                                  'TN \n\n '
-                                                                                  'Default: GTGTATAAGAGACAG:17:13'
-                                                                                  ':before')
-@click.option('--feat_type', '-ft', default='gene', help='gene, exon, CDS')
+@click.option('--feat_type', '-ft', default='gene',
+              help='feature type in the gff file to be used for annotation, e.g. gene, exon, CDS [gene]',
+              metavar="STR")
 @click.option('--identifiers', '-i', default='ID,Name,locus_tag',
-              help='Feature information to extract from annotation file')
-@click.option('--closest_gene', '-c', default=False, help='Get closest features for each barcode')
+              help='Feature identifiers to extract from annotation file [ID,Name,locus_tag]', metavar="STR[,STR]")
+@click.option('--closest_gene', '-c', default=False,
+              help='for barcodes not directly overlapping a feature, report the closest feature [False]')
 def map(forward, gff, name, transposon, out_dir, genome, filter_low_counts,
         feat_type, identifiers, closest_gene):
     identifiers = tuple(identifiers.split(','))
     print(identifiers)
     mapper = Mapper(forward, transposon, genome=genome, name=name, output_dir=out_dir)
     mapper.map_insertions(filter_below=filter_low_counts)
-    mapper.annotate(gff, intersect=not closest_gene, feature_type=feat_type, identifiers=identifiers)
+    if gff:
+        mapper.annotate(gff, intersect=not closest_gene, feature_type=feat_type, identifiers=identifiers)
     mapper.write_mapfile()
 
 
