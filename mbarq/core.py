@@ -26,10 +26,10 @@ class FastA:
 
 
 class Barcode:
-    def __init__(self, structure):
+    def __init__(self, structure='', sequence=''):
         self.structure: str = structure
-        self.bc_seq: Optional[str] = None
-        self.host: Optional[str] = None
+        self.bc_seq: str = sequence
+        self.host: str = ''
         self.bc_len: int
         self.tn_seq: str
         self.count: int = -1
@@ -43,7 +43,10 @@ class Barcode:
         self.strand: Optional[str] = None
         self.multimap: Optional[bool] = None
         self.identifiers: Optional[List[str]] = None
-        self._parse_structure()
+        if self.structure:
+            self._parse_structure()
+        if not self.structure and not self.bc_seq:
+            raise ValueError("Please provide either structure or sequence")
 
     # def _parse_structure_old(self):
     #     self.tn_seq = self.structure.split(':')[0]
@@ -100,6 +103,8 @@ class Barcode:
         '''
 
         splits: List[str] = r1.sequence.split(self.tn_seq)  # check that tn in sequence?
+        self.bc_seq = ''
+        self.host = ''
         if self.tn_before_bc:
             bc_start = -(self.bc_len + self.len_spacer)
             bc_end = -self.len_spacer
