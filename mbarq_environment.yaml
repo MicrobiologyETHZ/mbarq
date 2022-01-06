@@ -1,4 +1,4 @@
-name: tnseq2
+name: mbarq
 channels:
   - defaults
   - bioconda
@@ -10,5 +10,4 @@ dependencies:
   - pytest
   - click
   - pip
-#  - pip:
-#      - git+https://github.com/MicrobiologyETHZ/nccr_tnseq2#egg=tnseq2
+

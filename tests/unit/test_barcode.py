@@ -1,4 +1,4 @@
-from mBARq.core import Barcode, BarSeqData
+from mbarq.core import Barcode, BarSeqData
 
 
 TESTDATA = "./tests/test_files"
@@ -14,7 +14,8 @@ experiments = ['rbseq', 'wish']
 
 def get_structure(experiment='rbseq'):
     if experiment == 'rbseq':
-        return 'GTGTATAAGAGACAG:17:13:before'
+        #return 'GTGTATAAGAGACAG:17:13:before'
+        return 'B17N13GTGTATAAGAGACAG'
     elif experiment == 'wish':
         return 'GGAGGTTCACAATGTGGGAGGTCA:40:0:after'
     else:

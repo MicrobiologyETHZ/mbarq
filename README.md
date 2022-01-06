@@ -8,9 +8,11 @@ Allows mapping of transposon library, as well as barcode counting
 - Create and activate conda environment 
 ```
 git clone ...
+cd mbarq
 mamba env create -f tnseq_environment.yaml
-conda activate tnseq2
-tnseq2 --help
+conda activate mbarq
+pip install -e .
+mbarq --help
 
 ```
 ### Run `tnseq2 maplib` on test data

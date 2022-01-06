@@ -10,7 +10,7 @@ TESTDATA = "./tests/test_files"
 EXPDATA = "./tests/expected_outcomes/mapping"
 OUTDIR = "./tests/tmp"
 
-# todo add pytest tmp directory, will help with teardown
+
 # todo generalize inputs between functions
 # todo add common functions to conftest.py
 
@@ -42,7 +42,7 @@ def assert_files_are_same(file1, file2, verbose=False):
     assert proc.returncode == 0
 
 
-def get_test_file(experiment = 'rbseq'):
+def get_test_file(experiment='rbseq'):
     if experiment == 'rbseq':
         return f'{TESTDATA}/library_13_1_1.fq', f'{TESTDATA}/ref/Salmonella_genome_FQ312003.1_SL1344.fasta'
     else:
