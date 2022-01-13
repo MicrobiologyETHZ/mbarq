@@ -17,14 +17,25 @@ def get_structure(experiment='rbseq'):
         #return 'GTGTATAAGAGACAG:17:13:before'
         return 'B17N13GTGTATAAGAGACAG'
     elif experiment == 'wish':
-        return 'GGAGGTTCACAATGTGGGAGGTCA:40:0:after'
+        return 'GGAGGTTCACAATGTGGGAGGTCAB40'
     else:
         return None
 
 
-def test__parse_structure():
-    # Might completely change how transposon is encoded
-    pass
+def test__parse_structure():  # todo !!!!
+    # RBSeq
+    barcode = Barcode('B17N13GTGTATAAGAGACAG')
+    assert barcode.bc_len == 17
+    assert barcode.tn_seq == 'GTGTATAAGAGACAG'
+    assert barcode.len_spacer == 13
+    assert barcode.bc_before_tn is True
+
+    # WISH
+    barcode = Barcode('GGAGGTTCACAATGTGGGAGGTCAB40')
+    assert barcode.bc_len == 40
+    assert barcode.tn_seq == 'GGAGGTTCACAATGTGGGAGGTCA'
+    assert barcode.len_spacer == 0
+    assert barcode.bc_before_tn is False
 
 
 def test_extract_barcode_host_rbseq():

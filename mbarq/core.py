@@ -33,7 +33,7 @@ class Barcode:
         self.bc_len: int
         self.tn_seq: str
         self.count: int = -1
-        self.tn_before_bc: bool
+        self.bc_before_tn: bool
         self.len_spacer: int
         # In theory these are optional
         self.host: str
@@ -52,7 +52,7 @@ class Barcode:
     #     self.tn_seq = self.structure.split(':')[0]
     #     self.len_spacer = int(self.structure.split(':')[2])
     #     self.bc_len = int(self.structure.split(':')[1])
-    #     self.tn_before_bc = True if self.structure.split(':')[3] == 'before' else False
+    #     self.bc_before_tn = True if self.structure.split(':')[3] == 'before' else False
 
     def _parse_structure(self):
         try:
@@ -60,7 +60,7 @@ class Barcode:
             bc_len = re.findall('B(\\d+)', self.structure)[0]
             spacer = re.findall('N(\\d+)', self.structure)
             self.len_spacer = int(spacer[0]) if spacer else 0
-            self.tn_before_bc = self.structure.index(self.tn_seq) > self.structure.index(bc_len)
+            self.bc_before_tn = self.structure.index(self.tn_seq) > self.structure.index(bc_len)
             self.bc_len = int(bc_len)
 
 
@@ -105,7 +105,7 @@ class Barcode:
         splits: List[str] = r1.sequence.split(self.tn_seq)  # check that tn in sequence?
         self.bc_seq = ''
         self.host = ''
-        if self.tn_before_bc:
+        if self.bc_before_tn:
             bc_start = -(self.bc_len + self.len_spacer)
             bc_end = -self.len_spacer
             bc_seq = splits[0]

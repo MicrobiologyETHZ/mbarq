@@ -15,27 +15,50 @@ class BarcodeCounter(BarSeqData):
                  name: str = '',
                  mapping_file: str = '',
                  output_dir: str = ".",
-                 edit_distance: int = 3
+                 edit_distance: int = 2
                  ) -> None:
         super().__init__(sequencing_file)
-        self.barcode_structure = barcode_structure
         self.output_dir: Path = Path(output_dir)
-        self.name = name if name else Path(self.seq_file.strip('gz')).stem
+        self.name = name if name else Path(self.seq_file.strip('.gz')).stem
+        self.logger = get_logger('counting-log', self.output_dir / f"{self.name}_counting.log")
+        self.logger.info("Initializing Barcode Counter")
+        self.barcode_structure = barcode_structure
         self.map_file: str = mapping_file
         self.merged: bool = False
         self.barcode_counter: Counter = collections.Counter()
         self.edit_distance: int = edit_distance
         self.annotated_cnts: pd.DataFrame = pd.DataFrame()
-        self.counts_file: Path = self.output_dir/ f"{self.name}_mbarq_counts.csv"
-        self.logger = get_logger('counting-log', self.output_dir / f"{self.name}_counting.log")
+        self.counts_file: Path = self.output_dir / f"{self.name}_mbarq_counts.csv"
+        self.bc_annotations: pd.DataFrame = self._validate_annotations()
         self.validate_input()
-        self.logger.info("Initializing Counter")
+
+    def _validate_annotations(self) -> pd.DataFrame:
+        """
+
+        Simple validation on the mapping file
+        :return: pd.DataFrame
+
+        """
+        if not self.map_file:
+            self.logger.info(f'No barcode mapping/annotations file provided. Annotation step will be skipped')
+            return pd.DataFrame(columns=['barcode'])
+        else:
+            self.logger.info(f'Annotation file provided: {self.map_file}')
+            bc_annotations = pd.read_csv(self.map_file)
+            if 'barcode' not in bc_annotations.columns:
+                self.logger.error('No column "barcode" found in the mapping/annotation file')
+                sys.exit(1)
+            if 'barcode_count' in bc_annotations.columns:
+                self.logger.error('"barcode_count" column already present in the '
+                                  'mapping/annoations file. Please rename to avoid confusion')
+                sys.exit(1)
+            return bc_annotations
 
     def _extract_barcodes(self) -> None:
         """
         Count barcodes in a sequencing file (fasta/fastq)
+
         """
-        self.logger.info('------------------')
         self.logger.info("Extracting Barcodes")
         self.logger.info("Counting reads with and without transposon sequence")
         total_inserts: int = 0
@@ -63,23 +86,46 @@ class BarcodeCounter(BarSeqData):
         self.logger.info(f'\tReads w/o transposon:\t{without_tp2}')
         self.logger.info(f'\t% Reads w/o transposon: \t {without_tp2/total_inserts*100}')
 
-    def _merge_similar(self):
+    def _merge_similar(self) -> None:
+        """
 
+        If edit_distance > 0, merge barcodes with edit distance < or equal to edit_distance
+        :return: None
+
+        """
         for sequence, count in self.barcode_counter.most_common():
             b = Barcode(sequence=sequence)
             b.count = count
             self.barcodes.append(b)
-        for rare_barcode in self.barcodes[::-1]:
-            idx = self.barcodes.index(rare_barcode)
-            for common_barcode in self.barcodes[:idx]:
-                if common_barcode.editdistance(rare_barcode) < self.edit_distance:
-                    common_barcode.count += rare_barcode.count
-                    self.barcodes.remove(rare_barcode)
-                    break
+
+        if self.edit_distance < 1:
+            self.logger.info(f'Not merging similar barcodes')
+            self.logger.info(f'Number of unique barcodes: {len(self.barcodes)}')
+            self.merged = False
+        else:
+            self.logger.info(f'Merging barcodes with edit distance <= {self.edit_distance}')
+            self.logger.info(f"Number of barcodes to process: {len(self.barcodes)}")
+            processed_barcodes = 0
+            for rare_barcode in self.barcodes[::-1]:
+                idx = self.barcodes.index(rare_barcode)
+                processed_barcodes += 1
+                if processed_barcodes % 1000 == 0:
+                    self.logger.info(f'\tBarcodes processed:\t{processed_barcodes}')
+                for common_barcode in self.barcodes[:idx]:
+                    if common_barcode.editdistance(rare_barcode) <= self.edit_distance:
+                        if rare_barcode.bc_seq in self.bc_annotations['barcode'].values:
+                            common_barcode.bc_seq = rare_barcode.bc_seq
+                        common_barcode.count += rare_barcode.count
+                        self.barcodes.remove(rare_barcode)
+                        break
+            self.merged = True
         self.barcode_counter = collections.Counter({barcode.bc_seq: barcode.count for barcode in self.barcodes})
-        self.merged = True
 
     def _annotate_barcodes(self) -> None:
+        """
+        If annotation is available, annotate the counted barcodes
+        :return: None
+        """
         assert self.barcode_counter is not None
         self.logger.info(f'Barcodes with edit distance of less than {self.edit_distance} '
                          f'have been merged: {self.merged}')
@@ -87,30 +133,19 @@ class BarcodeCounter(BarSeqData):
                    .reset_index())
         cnts_df.columns = ['barcode', 'barcode_count']
         cnts_df = cnts_df[cnts_df['barcode_count'] > 1]
-
         if cnts_df.empty:
             self.logger.error('No barcodes with counts > 1 found')
             sys.exit(1)
         self.logger.info(f'Number of unique barcodes to annotate: {cnts_df.barcode.nunique()}')
-
-        if not self.map_file:
-            self.logger.info('No mapping file found, skipping the annotation')
+        if self.bc_annotations.empty:
+            self.logger.info('No mapping file provided, skipping the annotation')
             self.annotated_cnts = cnts_df
         else:
-            self.logger.info(f'Mapping file used: {self.map_file}')
-            bc_annotations = pd.read_csv(self.map_file)
-            to_keep = bc_annotations.columns
-            if 'barcode' not in bc_annotations.columns:
-                self.logger.error('No column "barcode" found in the mapping/annotation file')
-                sys.exit(1)
-            if 'barcode_count' in bc_annotations.columns:
-                self.logger.error('"barcode_count" column already present in the '
-                                  'mapping/annoations file. Please rename to avoid confusion')
-                sys.exit(1)
+            self.logger.info(f'Annotating barcodes')
             self.logger.info(f'Columns found in the mapping/annotations file: '
-                             f'{", ".join(bc_annotations.columns)}')
-            self.annotated_cnts = cnts_df.merge(bc_annotations, how='left', on='barcode')
-            filter_col = to_keep[1]
+                             f'{", ".join(self.bc_annotations.columns)}')
+            self.annotated_cnts = cnts_df.merge(self.bc_annotations, how='left', on='barcode')
+            filter_col = self.bc_annotations.columns[1]
             with_ids = self.annotated_cnts[self.annotated_cnts[filter_col].notnull()]
             self.logger.info(f'Number of annotated barcodes: {with_ids.shape[0]}')
             no_ids = self.annotated_cnts[self.annotated_cnts[filter_col].isna()]
@@ -120,11 +155,18 @@ class BarcodeCounter(BarSeqData):
         self.annotated_cnts.to_csv(self.counts_file)
 
     def count_barcodes(self):
-        self.logger.info("1")
+        self.logger.info('------------------')
+        self.logger.info("Step 1: Counting ")
+        self.logger.info('------------------')
         self._extract_barcodes()
-        self.logger.info("2")
+        self.logger.info('------------------')
+        self.logger.info("Step 2: Merging")
+        self.logger.info('------------------')
         self._merge_similar()
-        self.logger.info("3")
+        self.logger.info('------------------')
+        self.logger.info("Step 3: Annotating")
+        self.logger.info('------------------')
         self._annotate_barcodes()
+        self.logger.info("Finished!")
         self.logger.info(f'Writting final counts to {self.counts_file}')
         self._write_counts_file()

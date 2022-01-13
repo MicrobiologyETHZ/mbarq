@@ -17,12 +17,13 @@ OUTDIR = "./tests/tmp"
 
 #  todo Add this code to the conftest.py?
 
+
 def get_structure(experiment='rbseq'):
     if experiment == 'rbseq':
         #return 'GTGTATAAGAGACAG:17:13:before'
         return 'B17N13GTGTATAAGAGACAG'
-    elif experiment == 'wish': # todo fix that
-        return 'GGAGGTTCACAATGTGGGAGGTCA:40:0:after'
+    elif experiment == 'wish':
+        return 'GGAGGTTCACAATGTGGGAGGTCAB40'
     else:
         return None
 
@@ -46,7 +47,9 @@ def assert_files_are_same(file1, file2, verbose=False):
 
 def get_test_file(experiment='rbseq'):
     if experiment == 'rbseq':
-        return f'{TESTDATA}/library_13_1_1.fq', f'{TESTDATA}/ref/Salmonella_genome_FQ312003.1_SL1344.fasta'
+        return f'{TESTDATA}/dnaid2023_12_test.fasta', f'{TESTDATA}/ref/library_13_1.barcode_map.annotated.csv'
+    elif experiment == 'wish':
+        return f'{TESTDATA}/LibraryA_pilot2.fq.gz', f'{TESTDATA}/ref/20210520_BarcodeList.csv'
     else:
         return None
 
@@ -98,9 +101,8 @@ def test_merge_similar():
 
 
 def test_merge_similar_dnaid2023():
-    r1 = f'{TESTDATA}/dnaid2023_12_test.fasta'
+    r1, mfile = get_test_file(experiment='rbseq')
     structure = get_structure()
-    mfile = f'{TESTDATA}/ref/library_13_1.barcode_map.annotated.csv'
     seq_data = BarcodeCounter(r1, structure, mapping_file=mfile, output_dir=OUTDIR)
     seq_data._extract_barcodes()
     seq_data._merge_similar()
@@ -110,9 +112,8 @@ def test_merge_similar_dnaid2023():
 
 
 def test_annotate_barcodes():
-    r1 = f'{TESTDATA}/dnaid2023_12_test.fasta'
+    r1, mfile = get_test_file(experiment='rbseq')
     structure = get_structure()
-    mfile = f'{TESTDATA}/ref/library_13_1.barcode_map.annotated.csv'
     seq_data = BarcodeCounter(r1, structure, mapping_file=mfile, output_dir=OUTDIR)
     seq_data._extract_barcodes()
     seq_data._merge_similar()
@@ -123,15 +124,24 @@ def test_annotate_barcodes():
 
 
 def test_count_barcodes():
-    r1 = f'{TESTDATA}/dnaid2023_12_test.fasta'
+    r1, mfile = get_test_file(experiment='rbseq')
     structure = get_structure()
-    mfile = f'{TESTDATA}/ref/library_13_1.barcode_map.annotated.csv'
     seq_data = BarcodeCounter(r1, structure, mapping_file=mfile, output_dir=OUTDIR)
     seq_data.count_barcodes()
     expected_counts = f"{EXPDATA}/test_annotate_barcodes_dnaid2023.csv"
     actual_counts = f"{OUTDIR}/dnaid2023_12_test_mbarq_counts.csv"
     assert_files_are_same(expected_counts, actual_counts)
 
+def test_count_barcodes_wish():
+    fq, mfile = get_test_file(experiment='wish')
+    structure = get_structure(experiment='wish')
+    seq_data = BarcodeCounter(fq, structure, mapping_file=mfile, output_dir=OUTDIR)
+    seq_data.count_barcodes()
+    expected_counts = f"{EXPDATA}/LibraryA_pilot2_mbarq_counts.csv"
+    actual_counts = f"{OUTDIR}/LibraryA_pilot2_mbarq_counts.csv"
+    assert_files_are_same(expected_counts, actual_counts)
+
+
 
 if __name__ == '__main__':
-    test_count_barcodes()
+    test_merge_similar_dnaid2023()

@@ -37,7 +37,7 @@ class Mapper(BarSeqData):
         self.edit_distance: int = edit_distance
         self.logger = get_logger('mapping-log', self.output_dir / f"{self.name}_mapping.log")
         self.validate_input()
-        self.logger.info("Initializing Mapper")
+        self.logger.info("Initializing Barcode Mapper")
 
     def validate_input(self) -> None:
         if not self.blastdb and not self.genome:

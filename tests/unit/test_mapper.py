@@ -176,13 +176,14 @@ def test__add_bedintersect_results_to_positions(tmpdir):
     global OUTDIR
     r1, genome = get_test_file()
     structure = get_structure()
-    seq_data = Mapper(r1, structure, genome=genome, output_dir=tmpdir)
+    seq_data = Mapper(r1, structure, genome=genome, output_dir=OUTDIR)
     seq_data.identifiers = ('ID', 'Name', 'locus_tag')
     seq_data.temp_bed_results_file = f'{EXPDATA}/library_13_1_1.bed.intersect.tab'
     seq_data.positions = pd.read_csv(f'{EXPDATA}/merge_colliding_bcs_new.csv', index_col=0)
     seq_data._add_bedintersect_results_to_positions('gene')
     seq_data.write_mapfile()
     out_map = tmpdir.join('library_13_1_1.map.annotated.csv')
+    out_map = Path(OUTDIR)/f"library_13_1_1.map.annotated.csv"
     expected_map = f'{EXPDATA}/library_13_1_1.map.annotated.csv'
     assert_files_are_same(out_map, expected_map)
 

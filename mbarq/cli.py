@@ -4,6 +4,8 @@ from pathlib import Path
 import click
 import sys
 import logging
+from mbarq.mapper import Mapper
+from mbarq.counter import BarcodeCounter
 
 
 class DefaultHelp(click.Command):
@@ -20,10 +22,6 @@ class DefaultHelp(click.Command):
         return super(DefaultHelp, self).parse_args(ctx, args)
 
 
-
-from mbarq.mapper import Mapper
-
-
 @click.group(options_metavar='', subcommand_metavar='<command> [options]', invoke_without_command=False)
 def main():
     """
@@ -32,7 +30,7 @@ def main():
     Version: 1.0.0
     Reference:
 
-    Type motus <command> to print the help for a specific command
+    Type mbarq <command> to print the help for a specific command
 
     """
 
@@ -111,27 +109,43 @@ def map(forward, gff, name, transposon, out_dir, genome, filter_low_counts,
     mapper.write_mapfile()
 
 
-# # COUNT
-# @main.command(short_help="count barcodes in one sample")
-# @click.option('--forward', '-f', help='Input FASTQ to count. (Forward Reads only)')
-# @click.option('--mapping_file', '-m',
-#               help='Barcode Map in csv format. First column must be titled "barcode", and contain the barcodes. \n\n'
-#                    'Example: \n\n'
-#                    'barcode,barcodeID\n\n'
-#                    'AGACCAGTACATGACGGGTATCTCTCTGCCACTCCTGTAT,Tag_1\n\n')
-# @click.option('--out_dir', '-o', default='.', help='Output Directory')
-# @click.option('--sample_name', '-n', default='', help='Sample Name')
-# @click.option('--transposon', '-tn', default="GTGTATAAGAGACAG:17:13:before", help='Construct Structure:\n\n'
-#                                                                                   'TN sequence:BC length:length of spacer between BC and TN sequence:BC position relative to TN (before or after) \n\n'
-#                                                                                   '-|BARCODE|-spacer-|--TN sequence--|-\n\n'
-#                                                                                   '-|-17bp--|--13bp--|GTGTATAAGAGACAG|-\n\n'
-#                                                                                   'Default: GTGTATAAGAGACAG:17:13:before')
-# def count(forward, mapping_file, out_dir, transposon, sample_name):
-#     if not sample_name:
-#         sample_name = Path(forward.strip('.gz')).stem
-#     quantify(forward, transposon, mapping_file, out_dir, sample_name)
-#
-#
+# COUNT
+@main.command(cls=DefaultHelp, short_help="\tcount barcodes in a sequencing file", options_metavar='<options>')
+@click.option('--forward', '-f', required=True,
+              help='input file for reads in forward orientation; FASTQ formatted; gz is ok.',
+              metavar='FILE')
+@click.option('--mapping_file', '-m', default='',
+              help='Barcode map/annotation file in csv format.'
+                   'First column must be titled "barcode", and contain the barcode sequences. [optional] \n\n'
+                   'Example: \n\n'
+                   'barcode,barcodeID\n'
+                   'AGACCAGTACATGACGGGTATCTCTCTGCCACTCCTGTAT,Tag_1\n\n ', metavar='FILE')
+@click.option('--out_dir', '-o', default='.', help='output directory [.]', metavar="DIR")
+@click.option('--name', '-n', default='', help='unique library name, '
+                                               'by default will try to use FASTQ filename', metavar='STR')
+@click.option('--transposon', '-tn',
+              default="B17N13GTGTATAAGAGACAG",
+              help="""\b
+                    transposon construct structure, consisting of the following:
+                       1. conserved transposon sequence, eg. GTGTATAAGAGACAG
+                       2. barcode length, written as B[# of nt], eg. B17
+                       3. if there are extra nucleotides between barcode and 
+                          transposon sequence, indicate with N[# of nt], eg. N13
+                    Note: relative position of barcode and transpson matters, 
+                    the default (RBSeq tn) represents the following construct:
+                    ---|BARCODE (17 nt)|--spacer (13 nt)--|GTGTATAAGAGACAG|---HOST--
+                     [B17N13GTGTATAAGAGACAG]
+                     For WISH use GGAGGTTCACAATGTGGGAGGTCAB40
+                     
+                    """, metavar='STR')
+@click.option('--edit_distance', '-e', default=2,
+              help='merge barcodes with edit distances <= [INT] [2]', metavar="INT")
+def count(forward, mapping_file, out_dir, transposon, name, edit_distance):
+    counter = BarcodeCounter(forward, transposon, name=name, mapping_file=mapping_file,
+                             output_dir=out_dir, edit_distance=edit_distance)
+    counter.count_barcodes()
+
+
 # # # Custom
 # # @main.command()
 # # @click.option('--config', '-c', default='configs/map_config.yaml', help='Configuration File')
