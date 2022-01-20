@@ -51,7 +51,7 @@ Manifest.toml
 
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
-*.ipynb
+#*.ipynb
 
 # Remove previous ipynb_checkpoints
 #   git rm -r .ipynb_checkpoints/
