@@ -1,45 +1,76 @@
-# Analysis of RB-TNSeq Data
+# Analysis of large-throughput barcoded screen data
 
-Allows mapping of transposon library, as well as barcode counting
-
+Example usage:
+1. Mapping, quantification and analysis of random transposon mutagenesis (RB-Seq) experiments. 
+2. Quantification of custom barcoded strains 
+3. More to come! 
 
 ## Installation:
 
-- Create and activate conda environment 
+- Clone the repository and create and activate conda environment
+
 ```
-git clone ...
+git clone https://github.com/MicrobiologyETHZ/mbarq.git
 cd mbarq
-mamba env create -f tnseq_environment.yaml
+#conda env create -f mbarq_environment.yaml
+mamba env create -f mbarq_environment.yaml
 conda activate mbarq
 pip install -e .
 mbarq --help
 
 ```
-### Run `tnseq2 maplib` on test data
+### Identify insertion sites for RB-Seq library
 
-1. Display help information
+
+```shell
+Usage: mbarq map <options>
+
+Options:
+  -f, --forward FILE           input file for reads in forward orientation;
+                               FASTQ formatted; gz is ok.  [required]
+  -g, --genome FILE            reference genome in FASTA format  [required]
+  -a, --gff FILE               annotation file in gff format
+  -n, --name STR               unique library name, by default will try to use
+                               FASTQ filename
+  -tn, --transposon STR         transposon construct structure, consisting of the following:
+                                  1. conserved transposon sequence, eg. GTGTATAAGAGACAG
+                                  2. barcode length, written as B[# of nt], eg. B17
+                                  3. if there are extra nucleotides between barcode and 
+                                     transposon sequence, indicate with N[# of nt], eg. N13
+                               Note: relative position of barcode and transpson matters, 
+                               the default represents the following construct:
+                               ---|BARCODE (17 nt)|--spacer (13 nt)--|GTGTATAAGAGACAG|---HOST--
+                                [B17N13GTGTATAAGAGACAG]
+  -o, --out_dir DIR            output directory [.]
+  -l, --filter_low_counts INT  filter out barcodes supported by [INT] or less
+                               reads [0]
+  -ft, --feat_type STR         feature type in the gff file to be used for
+                               annotation, e.g. gene, exon, CDS [gene]
+  -i, --identifiers STR[,STR]  Feature identifiers to extract from annotation
+                               file [ID,Name,locus_tag]
+  -c, --closest_gene BOOLEAN   for barcodes not directly overlapping a
+                               feature, report the closest feature [False]
 
 ```
-tnseq2 maplib --help
+### Example usage:
 
-```
-2. Run `maplib`
-    Required inputs: library fastq, genome fasta
-    Optional inputs: annotation gff
-    For test dataset have to set l=0, because only a few reads are analyzed
-    Output files: 
-        maplib_demo.barcode_map.annotated: final library map with annoations
-        maplib_demo.barcode_map: final library map without annotations
-        maplib_demo.blastn: blast output for each barcode: host sequence 
-        maplib_demo.fasta: fasta files of barcodes and host sequences (>barcode\nhostsequence)
-        maplib_demo.output.bed: bedtools intersection of gff and barcode locations
-        maplib_demo.temp.bed: need to clean this up after completion
-        tnseq2_mapping.log: log file, will only have errors in it
+Required inputs: library fastq, genome fasta
 
+```shell
+mbarq map -f <> -g <> -a <>
 ```
-tnseq2 maplib -f tests/test_files/library_13_1_1.fq -r tests/test_files/library_13_1_2.fq -a tests/test_files/ref/Salmonella_genome+plasmids.gff -g tests/test_files/ref/Salmonella_genome_FQ312003.1_SL1344.fasta --name maplib_demo -o tests/test_data -l 0
 
-```
+### Output files:
+
+maplib_demo.barcode_map.annotated: final library map with annoations
+maplib_demo.barcode_map: final library map without annotations
+maplib_demo.blastn: blast output for each barcode: host sequence 
+maplib_demo.fasta: fasta files of barcodes and host sequences (>barcode\nhostsequence)
+maplib_demo.output.bed: bedtools intersection of gff and barcode locations
+maplib_demo.temp.bed: need to clean this up after completion
+tnseq2_mapping.log: log file, will only have errors in it
+
+
 3. Run test suit
 
 ```

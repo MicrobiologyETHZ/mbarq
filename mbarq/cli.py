@@ -101,7 +101,6 @@ def main():
 def map(forward, gff, name, transposon, out_dir, genome, filter_low_counts,
         feat_type, identifiers, closest_gene):
     identifiers = tuple(identifiers.split(','))
-    print(identifiers)
     mapper = Mapper(forward, transposon, genome=genome, name=name, output_dir=out_dir)
     mapper.map_insertions(filter_below=filter_low_counts)
     if gff:
