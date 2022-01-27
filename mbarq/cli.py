@@ -4,7 +4,7 @@ from pathlib import Path
 import click
 import sys
 import logging
-from mbarq.mapper import Mapper
+from mbarq.mapper import Mapper, AnnotatedMap
 from mbarq.counter import BarcodeCounter
 
 
@@ -64,7 +64,10 @@ def main():
 #         sys.exit(1)
 
 
-# MAP
+##########
+#   MAP  #
+##########
+
 @main.command(cls=DefaultHelp, short_help="\tmap barcodes to reference genome", options_metavar='<options>')
 @click.option('--forward', '-f', required=True,
               help='input file for reads in forward orientation; FASTQ formatted; gz is ok.',
@@ -96,7 +99,7 @@ def main():
               metavar="STR")
 @click.option('--identifiers', '-i', default='ID,Name,locus_tag',
               help='Feature identifiers to extract from annotation file [ID,Name,locus_tag]', metavar="STR[,STR]")
-@click.option('--closest_gene', '-c', default=False,
+@click.option('--closest_gene',  is_flag=True,
               help='for barcodes not directly overlapping a feature, report the closest feature [False]')
 def map(forward, gff, name, transposon, out_dir, genome, filter_low_counts,
         feat_type, identifiers, closest_gene):
@@ -104,8 +107,34 @@ def map(forward, gff, name, transposon, out_dir, genome, filter_low_counts,
     mapper = Mapper(forward, transposon, genome=genome, name=name, output_dir=out_dir)
     mapper.map_insertions(filter_below=filter_low_counts)
     if gff:
-        mapper.annotate(gff, intersect=not closest_gene, feature_type=feat_type, identifiers=identifiers)
-    mapper.write_mapfile()
+        annotated_map = AnnotatedMap(map_file=mapper.map_file, annotation_file=gff,
+                                     feature_type=feat_type,
+                                     identifiers=identifiers, output_dir=out_dir)
+        annotated_map.annotate(intersect=not closest_gene)
+
+
+#####################
+#  ANNOTATE MAPPED  #
+#####################
+
+@main.command(cls=DefaultHelp, short_help="\tannotate mapped barcodes", options_metavar='<options>')
+@click.option('--barcode_file', '-i', default='', help='unannotated barcode file produced by "map"', metavar='FILE')
+@click.option('--gff', '-a', default='', help='annotation file in gff format', metavar='FILE')
+@click.option('--name', '-n', default='', help='unique library name, '
+                                               'by default will try to use FASTQ filename', metavar='STR')
+@click.option('--out_dir', '-o', default='.', help='output directory [.]', metavar="DIR")
+@click.option('--feat_type', '-ft', default='gene',
+              help='feature type in the gff file to be used for annotation, e.g. gene, exon, CDS [gene]',
+              metavar="STR")
+@click.option('--identifiers', '-i', default='ID,Name,locus_tag',
+              help='Feature identifiers to extract from annotation file [ID,Name,locus_tag]', metavar="STR[,STR]")
+@click.option('--closest_gene', is_flag=True,
+              help='for barcodes not directly overlapping a feature, report the closest feature [False]')
+def annotateMapped(barcode_file, gff, name,  out_dir, feat_type, identifiers, closest_gene):
+    identifiers = tuple(identifiers.split(','))
+    annotatedMap = AnnotatedMap(barcode_file, gff, feature_type=feat_type, identifiers=identifiers,
+                                name=name, output_dir=out_dir)
+    annotatedMap.annotate(intersect=not closest_gene)
 
 
 # COUNT

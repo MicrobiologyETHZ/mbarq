@@ -19,6 +19,15 @@ pip install -e .
 mbarq --help
 
 ```
+
+### Testting
+
+```shell
+tar -xvzf tests/expected_outcomes.tar.gz
+ tar -xvzf tests/test_files.tar.gz
+ pytest tests/unit/test_mapper.py 
+```
+
 ### Identify insertion sites for RB-Seq library
 
 

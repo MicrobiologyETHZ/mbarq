@@ -1,4 +1,4 @@
-from mbarq.mapper import Mapper
+from mbarq.mapper import Mapper, AnnotatedMap
 from collections import Counter
 from pathlib import Path
 import pandas as pd
@@ -111,10 +111,9 @@ def test__blast_barcode_host_genomedb(tmpdir):
     expected_blastn_file = f'{EXPDATA}/map_host_map.blast'
     assert_files_are_same(out_blastn_file, expected_blastn_file)
 
-
+#
 def test__find_most_likely_positions(tmpdir):
     #blast_file = f'{EXPDATA}/map_host_map.blast'
-
     r1, genome = get_test_file()
     structure = get_structure()
     blastdb = f'{TESTDATA}/ref/Salmonella_genome_FQ312003.1_SL1344.fasta'
@@ -146,75 +145,65 @@ def test_merge_colliding_bcs(tmpdir):
     seq_data.positions.to_csv(tmp_csv)
     expected_csv = f'{EXPDATA}/merge_colliding_bcs_new.csv'
     assert_files_are_same(tmp_csv, expected_csv)
-#
-#
-def test__find_annotation_overlaps(tmpdir):
 
+
+def test_map(tmpdir):
     r1, genome = get_test_file()
     structure = get_structure()
     gff_file = f'{TESTDATA}/ref/Salmonella_genome+plasmids.gff'
-    seq_data = Mapper(r1, structure, genome=genome, annotation_file=gff_file, output_dir=tmpdir)
-    seq_data.positions = pd.read_csv(f'{EXPDATA}/merge_colliding_bcs_new.csv', index_col=0)
-    seq_data._find_annotation_overlaps()
+    seq_data = Mapper(r1, structure, genome=genome, output_dir=tmpdir)
+    min_host_bases = 20
+    filter_below = 0
+    seq_data.map_insertions(min_host_bases, filter_below)
+    out_map = tmpdir.join('library_13_1_1.map.csv')
+    expected_map = f'{EXPDATA}/library_13_1_1_no_index.map.csv'
+    assert_files_are_same(out_map, expected_map)
+
+
+def test__find_annotation_overlaps(tmpdir):
+
+    gff_file = f'{TESTDATA}/ref/Salmonella_genome+plasmids.gff'
+    map_file = f'{EXPDATA}/library_13_1_1_no_index.map.csv'
+    annotated_map = AnnotatedMap(map_file, gff_file, "gene", ["ID", "Name", "locus_tag"],
+                                 name='library_13_1_1', output_dir=tmpdir)
+    annotated_map._find_annotation_overlaps()
     out_tab = tmpdir.join('library_13_1_1.bed.intersect.tab')
     expected_tab = f'{EXPDATA}/library_13_1_1.bed.intersect.tab'
     assert_files_are_same(out_tab, expected_tab)
 
+
 def test__find_closest_feature(tmpdir):
-    r1, genome = get_test_file()
-    structure = get_structure()
     gff_file = f'{TESTDATA}/ref/Salmonella_genome+plasmids.gff'
-    seq_data = Mapper(r1, structure, genome=genome, annotation_file=gff_file, output_dir=tmpdir)
-    seq_data.positions = pd.read_csv(f'{EXPDATA}/merge_colliding_bcs_new.csv', index_col=0)
-    seq_data._find_closest_feature()
+    map_file = f'{EXPDATA}/library_13_1_1_no_index.map.csv'
+    annotated_map = AnnotatedMap(map_file, gff_file, "gene", ["ID", "Name", "locus_tag"],
+                                 name='library_13_1_1', output_dir=tmpdir)
+    annotated_map._find_closest_feature()
     out_tab = tmpdir.join('library_13_1_1.bed.closest.tab')
     expected_tab = f'{EXPDATA}/library_13_1_1.bed.closest.tab'
     assert_files_are_same(out_tab, expected_tab)
 
 
 def test__add_bedintersect_results_to_positions(tmpdir):
-    global OUTDIR
-    r1, genome = get_test_file()
-    structure = get_structure()
-    seq_data = Mapper(r1, structure, genome=genome, output_dir=OUTDIR)
-    seq_data.identifiers = ('ID', 'Name', 'locus_tag')
-    seq_data.temp_bed_results_file = f'{EXPDATA}/library_13_1_1.bed.intersect.tab'
-    seq_data.positions = pd.read_csv(f'{EXPDATA}/merge_colliding_bcs_new.csv', index_col=0)
-    seq_data._add_bedintersect_results_to_positions('gene')
-    seq_data.write_mapfile()
+    gff_file = f'{TESTDATA}/ref/Salmonella_genome+plasmids.gff'
+    map_file = f'{EXPDATA}/library_13_1_1_no_index.map.csv'
+    annotated_map = AnnotatedMap(map_file, gff_file, "gene", ["ID", "Name", "locus_tag"],
+                                 name='library_13_1_1', output_dir=tmpdir)
+    annotated_map.temp_bed_results_file = f'{EXPDATA}/library_13_1_1.bed.intersect.tab'
+    annotated_map._add_bedintersect_results_to_positions(intersect=True)
     out_map = tmpdir.join('library_13_1_1.map.annotated.csv')
-    out_map = Path(OUTDIR)/f"library_13_1_1.map.annotated.csv"
     expected_map = f'{EXPDATA}/library_13_1_1.map.annotated.csv'
     assert_files_are_same(out_map, expected_map)
-
-
+#
+#
 def test__add_bedintersect_results_to_positions_with_closest(tmpdir):
-
-    r1, genome = get_test_file()
-    structure = get_structure()
-    seq_data = Mapper(r1, structure, genome=genome, output_dir=tmpdir)
-    seq_data.identifiers = ('ID', 'Name', 'locus_tag')
-    seq_data.temp_bed_closest_file = f'{EXPDATA}/library_13_1_1.bed.closest.tab'
-    seq_data.positions = pd.read_csv(f'{EXPDATA}/merge_colliding_bcs_new.csv', index_col=0)
-    seq_data._add_bedintersect_results_to_positions('gene', False)
-    seq_data.write_mapfile()
-    out_map = tmpdir.join('library_13_1_1.map.annotated.csv')
-    expected_map = f'{EXPDATA}/library_13_1_1.map.closest.annotated.csv'
-    assert_files_are_same(out_map, expected_map)
-
-
-def test_map(tmpdir):
-    global OUTDIR
-    r1, genome = get_test_file()
-    structure = get_structure()
     gff_file = f'{TESTDATA}/ref/Salmonella_genome+plasmids.gff'
-    seq_data = Mapper(r1, structure, genome=genome, annotation_file=gff_file, output_dir=tmpdir)
-    min_host_bases = 20
-    filter_below = 0
-    seq_data.map_insertions(min_host_bases, filter_below)
-    seq_data.write_mapfile()
-    out_map = tmpdir.join('library_13_1_1.map.csv')
-    expected_map = f'{EXPDATA}/library_13_1_1.map.csv'
+    map_file = f'{EXPDATA}/library_13_1_1_no_index.map.csv'
+    annotated_map = AnnotatedMap(map_file, gff_file, "gene", ["ID", "Name", "locus_tag"],
+                                 name='library_13_1_1_closest', output_dir=tmpdir)
+    annotated_map.temp_bed_closest_file = f'{EXPDATA}/library_13_1_1.bed.closest.tab'
+    annotated_map._add_bedintersect_results_to_positions(intersect=False)
+    out_map = tmpdir.join('library_13_1_1_closest.map.annotated.csv')
+    expected_map = f'{EXPDATA}/library_13_1_1.map.closest.annotated.csv'
     assert_files_are_same(out_map, expected_map)
 
 
@@ -228,12 +217,28 @@ def test_annotate_intersect(tmpdir):
     seq_data.map_insertions(min_host_bases, filter_below)
     feature_type = 'gene'
     identifiers = ('ID', 'Name', 'locus_tag')
-    seq_data.annotate(annotations_file=gff_file, feature_type=feature_type,
-                      identifiers=identifiers, intersect=True)
-    seq_data.write_mapfile()
+    annotated_map = AnnotatedMap(map_file=seq_data.map_file, annotation_file=gff_file, positions=seq_data.positions,
+                                 feature_type=feature_type, identifiers=identifiers, output_dir=tmpdir)
+    annotated_map.annotate(intersect=True)
     out_map = tmpdir.join('library_13_1_1.map.annotated.csv')
     expected_map = f'{EXPDATA}/library_13_1_1.map.annotated.csv'
     assert_files_are_same(out_map, expected_map)
+#
+#
+def test_annotate_intersect_no_gff(tmpdir):
+    # todo convert this into a test
+    gff_file = f'{TESTDATA}/ref/Salmonella_genome+plasmids.gffxx'
+    feature_type = 'gene'
+    identifiers = ('ID', 'Name', 'locus_tag')
+    map_file = f'{EXPDATA}/library_13_1_1.map.csv'
+    annotated_map = AnnotatedMap(map_file=map_file, annotation_file=gff_file,
+                                 feature_type=feature_type, identifiers=identifiers, output_dir=tmpdir)
+    annotated_map.annotate(intersect=True)
+    #out_map = tmpdir.join('library_13_1_1.map.annotated.csv')
+    #out_map = Path(OUTDIR)/'library_13_1_1.map.csv'
+    #expected_map = f'{EXPDATA}/library_13_1_1.map.annotated.csv'
+    #assert_files_are_same(out_map, expected_map)
+test_annotate_intersect_no_gff(OUTDIR)
 
 #
 def test_annotate_closest(tmpdir):
@@ -246,9 +251,9 @@ def test_annotate_closest(tmpdir):
     seq_data.map_insertions(min_host_bases, filter_below)
     feature_type = 'gene'
     identifiers = ('ID', 'Name', 'locus_tag')
-    seq_data.annotate(annotations_file=gff_file, feature_type=feature_type,
-                      identifiers=identifiers, intersect=False)
-    seq_data.write_mapfile()
+    annotated_map = AnnotatedMap(map_file=seq_data.map_file, annotation_file=gff_file, positions=seq_data.positions,
+                                 feature_type=feature_type, identifiers=identifiers, output_dir=tmpdir)
+    annotated_map.annotate(intersect=False)
     out_map = tmpdir.join('library_13_1_1.map.annotated.csv')
     expected_map = f'{EXPDATA}/library_13_1_1.map.closest.annotated.csv'
     assert_files_are_same(out_map, expected_map)
