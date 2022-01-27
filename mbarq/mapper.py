@@ -290,7 +290,13 @@ class AnnotatedMap:
         self.annotations: str = annotation_file
         self.feature_type: str = feature_type
         self.identifiers: List[str] = identifiers
-        self.name: str = name if name else Path(self.map_file).stem
+        if name:
+            print('OIOI')
+            self.name: str = name
+        else:
+            print(self.map_file)
+            self.name = Path(self.map_file).stem
+        print(self.name)
         self.output_dir: Path = Path(output_dir)
         self.annotated_map_file: Path = self.output_dir/f'{self.name}.annotated.csv'
         self.positions: pd.DataFrame = positions if not positions.empty else pd.read_csv(self.map_file)
