@@ -151,7 +151,7 @@ class Mapper(BarSeqData):
         df = pd.read_table(self.temp_blastn_file, header=None)
         df.columns = self.blast_columns.split()
         # Filter out spurious hits
-        df = df[(df.evalue < 0.001) & (df.pident > 95) & (df.length > 40)]
+        df = df[(df.evalue < 0.1) & (df.length > 20)]
         # Get a best hit for each qseqID: group by qseqid, find max bitscore
         best_hits = df.groupby('qseqid').agg({'bitscore': ['max']}).reset_index()
         best_hits.columns = ['qseqid', 'bitscore']
@@ -240,7 +240,7 @@ class Mapper(BarSeqData):
                 bc = bc2
                 cnt = bc2.count
             else:
-                if bc.editdistance(bc2) > 3:
+                if bc.editdistance(bc2) > self.edit_distance:
                     bc.count = cnt
                     final_bcs.append(bc)
                     bc = bc2
@@ -281,7 +281,7 @@ class AnnotatedMap:
     def __init__(self, map_file: str,
                  annotation_file: str,
                  feature_type: str,
-                 identifiers: Tuple[str],
+                 identifiers: Tuple[str, ...],
                  name: str = '',
                  output_dir: str = ".",
                  positions: pd.DataFrame = pd.DataFrame()
@@ -289,9 +289,8 @@ class AnnotatedMap:
         self.map_file: Union[str, Path] = map_file
         self.annotations: str = annotation_file
         self.feature_type: str = feature_type
-        self.identifiers: List[str] = identifiers
+        self.identifiers: Tuple[str, ...] = identifiers
         if name:
-            print('OIOI')
             self.name: str = name
         else:
             print(self.map_file)
@@ -305,7 +304,7 @@ class AnnotatedMap:
         self.temp_bed_results_file: Path = self.output_dir / f"{self.name}.bed.intersect.tab"
         self.temp_bed_closest_file: Path = self.output_dir / f"{self.name}.bed.closest.tab"
 
-    def _find_annotation_overlaps(self):
+    def _find_annotation_overlaps(self, intersect=True):
 
         """
         Takes output of merge colliding bcs, turns it into bed file, then finds intersections with
@@ -313,13 +312,25 @@ class AnnotatedMap:
         Generates tab file with the following columns: chr | sstart | gff-info-field | barcode
         """
         self.logger.info('------------------')
-        self.logger.info('Annotating mapped barcodes. Only annotating barcodes inside/overlapping features of interest')
+        self.logger.info('Annotating mapped barcodes')
         bed_map = self.positions.copy().reset_index()
         bed_map['startOffBy1'] = bed_map['insertion_site'] - 1
         bed_map[['chr', 'startOffBy1', 'insertion_site', 'barcode']].to_csv(self.temp_bed_file, sep='\t', index=False,
                                                                             header=False)
-        command = f"bedtools intersect -wb -a {self.annotations} -b {self.temp_bed_file} " \
-                  f"|cut -f1,3,5,9,13 > {self.temp_bed_results_file}"
+        if intersect:
+            self.logger.info('Only annotating barcodes inside/overlapping features of interest')
+            command = f"bedtools intersect -wb -b {self.annotations} -a {self.temp_bed_file} " \
+                      f" > {self.temp_bed_results_file}"
+        else:
+            self.logger.info('Finding closest feature for each barcode')
+            tmp_annotations = Path(self.annotations).with_suffix('.sorted.gff')
+            tmp_bed = self.temp_bed_file.with_suffix('.sorted.bed')
+            command = f"bedtools sort -i {self.temp_bed_file} > {tmp_bed};" \
+                      f"bedtools sort -i {self.annotations} | " \
+                      f"awk '$3 == \"{self.feature_type}\" {{print $0}} ' > {tmp_annotations};" \
+                      f"bedtools closest -b {tmp_annotations} -a {tmp_bed} -D b > {self.temp_bed_results_file}"
+        # todo add -id to only display downstream genes
+        # todo remove self.temp_bed_closest_file
         self.logger.info(f'bedtools command: {command}')
         return_code = subprocess.check_call(command, shell=True)
         if return_code != 0:
@@ -327,61 +338,81 @@ class AnnotatedMap:
                               f"Return code: {return_code}")
             sys.exit(1)
         else:
-            self.logger.info('Finished finding overlaps between barcodes and features. '
-                             f'Results are in {self.temp_bed_results_file}')
-            # todo leave this file, it turned out to be useful for SATAY
-            #  -> if want to summarize over different intervals
-            # os.remove(self.temp_bed_file)
+            self.logger.info('Finished finding overlaps between barcodes and features.')
+        # todo remove unnecessary files
 
-    def _find_closest_feature(self):
-        """
-        """
-        self.logger.info('------------------')
-        self.logger.info('Annotating mapped barcodes. Finding closest feature for each barcode')
-        bed_map = self.positions.copy().reset_index()
-        bed_map['startOffBy1'] = bed_map['insertion_site'] - 1
-        bed_map[['chr', 'startOffBy1', 'insertion_site', 'barcode']].to_csv(self.temp_bed_file, sep='\t', index=False,
-                                                                            header=False)
-        tmp_annotations = Path(self.annotations).with_suffix('.sorted.gff')
-        tmp_bed = self.temp_bed_file.with_suffix('.sorted.bed')
-        command = f"bedtools sort -i {self.temp_bed_file} > {tmp_bed};" \
-                  f"bedtools sort -i {self.annotations} |grep ID=gene > {tmp_annotations};" \
-                  f"bedtools closest -a {tmp_annotations} -b {tmp_bed} -d " \
-                  f"|cut -f1,3,5,9,13,14 > {self.temp_bed_closest_file}"
-        self.logger.info(f'Bedtools command: {command}')
-        return_code = subprocess.check_call(command, shell=True)
-        if return_code != 0:
-            self.logger.error(f"Failed to run bedtools. "
-                              f"Return code: {return_code}")
-            sys.exit(1)
-        else:
-            self.logger.info('Finished finding features close to or overlapping barcodes')
-            os.remove(tmp_bed)
-            os.remove(tmp_annotations)
-            # os.remove(self.temp_bed_file)
+    # def _find_annotation_overlaps(self):
+    #
+    #     """
+    #     Takes output of merge colliding bcs, turns it into bed file, then finds intersections with
+    #     annotation file.
+    #     Generates tab file with the following columns: chr | sstart | gff-info-field | barcode
+    #     """
+    #     self.logger.info('------------------')
+    #     self.logger.info('Annotating mapped barcodes. Only annotating barcodes inside/overlapping features of interest')
+    #     bed_map = self.positions.copy().reset_index()
+    #     bed_map['startOffBy1'] = bed_map['insertion_site'] - 1
+    #     bed_map[['chr', 'startOffBy1', 'insertion_site', 'barcode']].to_csv(self.temp_bed_file, sep='\t', index=False,
+    #                                                                         header=False)
+    #
+    #     command = f"bedtools intersect -wb -b {self.annotations} -a {self.temp_bed_file} " \
+    #               f" > {self.temp_bed_results_file}"
+    #     self.logger.info(f'bedtools command: {command}')
+    #     return_code = subprocess.check_call(command, shell=True)
+    #     if return_code != 0:
+    #         self.logger.error(f"Failed to run bedtools. "
+    #                           f"Return code: {return_code}")
+    #         sys.exit(1)
+    #     else:
+    #         self.logger.info('Finished finding overlaps between barcodes and features. '
+    #                          f'Results are in {self.temp_bed_results_file}')
+    #         # todo leave this file, it turned out to be useful for SATAY
+    #         #  -> if want to summarize over different intervals
+    #         # os.remove(self.temp_bed_file)
 
-    def _add_bedintersect_results_to_positions(self, intersect=True):
+    # def _find_closest_feature(self):
+    #     """
+    #     """
+    #     self.logger.info('------------------')
+    #     self.logger.info('Annotating mapped barcodes. Finding closest feature for each barcode')
+    #     bed_map = self.positions.copy().reset_index()
+    #     bed_map['startOffBy1'] = bed_map['insertion_site'] - 1
+    #     bed_map[['chr', 'startOffBy1', 'insertion_site', 'barcode']].to_csv(self.temp_bed_file, sep='\t', index=False,
+    #                                                                         header=False)
+    #     tmp_annotations = Path(self.annotations).with_suffix('.sorted.gff')
+    #     tmp_bed = self.temp_bed_file.with_suffix('.sorted.bed')
+    #     command = f"bedtools sort -i {self.temp_bed_file} > {tmp_bed};" \
+    #               f"bedtools sort -i {self.annotations} |grep ID=gene > {tmp_annotations};" \
+    #               f"bedtools closest -b {tmp_annotations} -a {tmp_bed} -d > {self.temp_bed_closest_file}"
+    #     self.logger.info(f'Bedtools command: {command}')
+    #     return_code = subprocess.check_call(command, shell=True)
+    #     if return_code != 0:
+    #         self.logger.error(f"Failed to run bedtools. "
+    #                           f"Return code: {return_code}")
+    #         sys.exit(1)
+    #     else:
+    #         self.logger.info('Finished finding features close to or overlapping barcodes')
+    #         os.remove(tmp_bed)
+    #         os.remove(tmp_annotations)
+    #         # os.remove(self.temp_bed_file)
+
+    def _add_bedtools_results_to_positions(self, intersect=True):
         """
         takes output_map file produced by _find_annotation_overlaps and merges it with barcode map on barcode
         """
+        antd_positions = pd.read_table(self.temp_bed_results_file, header=None)
         if intersect:
-            antd_positions = pd.read_table(self.temp_bed_results_file, header=None)
-            antd_positions.columns = ['seq', 'feature', 'position', 'gene_info', 'barcode']
-            antd_positions = antd_positions[antd_positions.feature == self.feature_type]
+            antd_positions.columns = ['bc_chr', 'bc_start', 'bc_insertion_site',
+                                      'barcode', 'chr', 'souce', 'feature', 'feat_start',
+                                      'feat_end', 'score', 'strand',
+                                      'phase', 'gene_info']
             antd_positions['distance_to_feature'] = 0
         else:
-            antd_positions = pd.read_table(self.temp_bed_closest_file, header=None)
-            antd_positions.columns = ['seq', 'feature', 'position', 'gene_info', 'barcode', 'distance_to_feature']
-            antd_positions = antd_positions[antd_positions.feature == self.feature_type]
-
-            def get_all_genes_with_min_distance(df):
-                minv = df['distance_to_feature'].min()
-                return df[df['distance_to_feature'] == minv]
-
-            antd_positions = (antd_positions.groupby('barcode')
-                              .apply(get_all_genes_with_min_distance)
-                              .drop(['barcode'], axis=1).reset_index())
-
+            antd_positions.columns = ['bc_chr', 'bc_start', 'bc_insertion_site',
+                                      'barcode', 'chr', 'souce', 'feature', 'feat_start',
+                                      'feat_end', 'score', 'strand',
+                                      'phase', 'gene_info', 'distance_to_feature']
+        antd_positions = antd_positions[antd_positions.feature == self.feature_type]
         for feat in self.identifiers:
             pattern = f'({feat}=.+?;|{feat}=.+?$)'
             antd_positions[feat] = (antd_positions['gene_info']
@@ -393,9 +424,13 @@ class AnnotatedMap:
         antd_positions = antd_positions[list(self.identifiers) + ['barcode', 'distance_to_feature']]
         self.annotated_positions = (self.positions.copy()
                                     .merge(antd_positions, how='left', on='barcode'))
+        for feat in self.identifiers:
+            self.annotated_positions[feat] = (self.annotated_positions[feat]
+                                              .fillna(self.annotated_positions['chr'] +
+                                                      ":" + self.annotated_positions['insertion_site'].astype(str)))
         self.logger.info(f"writing to {self.annotated_map_file}")
         self.annotated_positions.to_csv(self.annotated_map_file, index=False)
-        # os.remove(self.temp_bed_results_file)
+    # os.remove(self.temp_bed_results_file)
 
     def _validate_annotations(self) -> None:
 
@@ -421,8 +456,5 @@ class AnnotatedMap:
             self.logger.error(f'Found no positions to annotate. Is {self.map_file} empty?')
             sys.exit(1)
         self._validate_annotations()
-        if intersect:
-            self._find_annotation_overlaps()
-        else:
-            self._find_closest_feature()
-        self._add_bedintersect_results_to_positions(intersect)
+        self._find_annotation_overlaps(intersect)
+        self._add_bedtools_results_to_positions(intersect)

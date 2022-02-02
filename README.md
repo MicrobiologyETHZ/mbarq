@@ -66,7 +66,7 @@ Options:
 Required inputs: library fastq, genome fasta
 
 ```shell
-mbarq map -f <> -g <> -a <>
+mbarq map -f <> -g <> -a <> -l 100
 ```
 
 ### Output files:
@@ -80,16 +80,10 @@ maplib_demo.temp.bed: need to clean this up after completion
 tnseq2_mapping.log: log file, will only have errors in it
 
 
-3. Run test suit
-
-```
-pytest tests/unit/test_mapping.py -v
-```
-
-### Run `tnseq2 count` on test data
+### Run `mbarq count` on test data
 1. Display 
 ```
-tnseq2 count --help
+mbarq count --help
 ```
 
 2. Run on test data
