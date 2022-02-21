@@ -1,9 +1,11 @@
 # Analysis of large-throughput barcoded screen data
 
 Example usage:
+
 1. Mapping, quantification and analysis of random transposon mutagenesis (RB-Seq) experiments. 
 2. Quantification of custom barcoded strains 
 3. More to come! 
+
 
 ## Installation:
 
@@ -20,16 +22,41 @@ mbarq --help
 
 ```
 
-### Testting
-
-```shell
-tar -xvzf tests/expected_outcomes.tar.gz
- tar -xvzf tests/test_files.tar.gz
- pytest tests/unit/test_mapper.py 
-```
+## Usage
 
 ### Identify insertion sites for RB-Seq library
 
+**Required inputs**: 
+- FASTQ file generated from sequencing randomly barcoded mutant library
+- genome FASTA file of the bacteria used to generate the library
+- Transposon construct structure **add diagram**.
+
+**Suggested inputs**:
+- Annotation file in GFF3 format (this will allow mapping insertion sites to genomic features). 
+- Filtering parameter (``-l``, in our hands, filtering barcodes supported by less than 100 reads produced reliable library annotations. This is likely to be dataset dependent, and should be tested for each use case).
+- Report closest gene (``-c``). If ``gff`` files is provided, by default, ``mbarq`` will only report features overlaping the insertion site. In addition, ``mbarq`` can report the location and distance of the closest downstream feature for barcodes that do not directly overlap any features. 
+
+**Example Usage**
+
+```shell
+
+mbarq map -f <library_R1.fastq.gz> -g <host.fasta> -a <host.gff> -l 100
+
+```
+
+**Output files**
+
+``library.map.annotated.csv``: final library map with annotations 
+
+``library.map.csv``: final library map without annotations 
+
+``library_mapping.log``: log file 
+
+``library.blastn``: blast output for each barcode: host sequence;  
+``library.fasta``: fasta files of barcodes and host sequences (>barcode\nhostsequence); 
+``library.output.bed``: bedtools intersection of gff and barcode locations
+
+**All Options**
 
 ```shell
 Usage: mbarq map <options>
@@ -61,38 +88,97 @@ Options:
                                feature, report the closest feature [False]
 
 ```
-### Example usage:
 
-Required inputs: library fastq, genome fasta
+### Quantify barcoded strains in a sample
+
+**Required Inputs**
+- Sample sequencing file. Can be FASTQ of FASTA, commpressed is accepted. 
+- Transposon construct structure
+
+**Sugested Inputs**
+
+- Mapping file. Can be the mapping file produced by ``mbarq map``, or any ``csv`` file, where the first column is titled ``barcode`` and contains the barcode sequences. For example:
+
+    | barcode | barcodeID |
+    |---------|-----------|
+    | ATGCATG | Barcode1  |
+
+- By default, will try to merge barcodes with edit distance of <= 2. This can be changed with ``-e``
+
+**Example Usage**
+```
+mbarq count  -f <sample.fastq.gz> -m <library_mapping_file.csv>
+```
+
+**Output Files**
+- sample.?
+
+**All Options**
 
 ```shell
-mbarq map -f <> -g <> -a <> -l 100
-```
 
-### Output files:
-
-maplib_demo.barcode_map.annotated: final library map with annoations
-maplib_demo.barcode_map: final library map without annotations
-maplib_demo.blastn: blast output for each barcode: host sequence 
-maplib_demo.fasta: fasta files of barcodes and host sequences (>barcode\nhostsequence)
-maplib_demo.output.bed: bedtools intersection of gff and barcode locations
-maplib_demo.temp.bed: need to clean this up after completion
-tnseq2_mapping.log: log file, will only have errors in it
-
-
-### Run `mbarq count` on test data
-1. Display 
-```
 mbarq count --help
+Usage: mbarq count <options>
+
+Options:
+  -f, --forward FILE       input file for reads in forward orientation; FASTQ
+                           formatted; gz is ok.  [required]
+  -m, --mapping_file FILE  Barcode map/annotation file in csv format.First
+                           column must be titled "barcode", and contain the
+                           barcode sequences. [optional]
+                           
+                           Example:
+                           
+                           barcode,barcodeID
+                           AGACCAGTACATGACGGGTATCTCTCTGCCACTCCTGTAT,Tag_1
+                           
+  -o, --out_dir DIR        output directory [.]
+  -n, --name STR           unique library name, by default will try to use
+                           FASTQ filename
+  -tn, --transposon STR    transposon construct structure, consisting of the following:
+                              1. conserved transposon sequence, eg. GTGTATAAGAGACAG
+                              2. barcode length, written as B[# of nt], eg. B17
+                              3. if there are extra nucleotides between barcode and 
+                                 transposon sequence, indicate with N[# of nt], eg. N13
+                           Note: relative position of barcode and transpson matters, 
+                           the default (RBSeq tn) represents the following construct:
+                           ---|BARCODE (17 nt)|--spacer (13 nt)--|GTGTATAAGAGACAG|---HOST--
+                            [B17N13GTGTATAAGAGACAG]
+                            For WISH use GGAGGTTCACAATGTGGGAGGTCAB40
+                            
+  -e, --edit_distance INT  merge barcodes with edit distances <= [INT] [2]
+  -h, --help               Show this message and exit.
+
 ```
 
-2. Run on test data
-    Required Inputs:
-    Optional Inputs: mapping file 
-    Output Files:
-        count_demo_counts_mapped: barcodes and counts, for barcodes found in the mapping file
-        count_demo_counts_unmapped: barcodes and counts for barcodes not found in the mapping file
-        If not mapping file is provided, all barcode and counts will be in the count_demo_counts_mapped
+
+### Merge barcode counts from multiple samples
+
+**Required Inputs**
+**Example Usage**
+
+```shell
+mbarq merge -i FILE[,FILE] | -d -o --annotation_cols [ID,Name,locus_tag]
+```
+
+
+### Filter samples with strong bottlenecks
+
+```shell
+
+mbarq bottleneck --controls_file --merged_counts --batch_file 
+
+```
+
+
+### Determine differentially abundant barcodes
+
+```shell
+
+mbarq analyse --controls_file --batch_file --merged_counts --batch_col --baseline 
+--treat_col
+```
+
         
 ```
 tnseq2 count -f tests/test_files/dnaid2023_12_test.fasta -n count_demo -o tests/test_data -m tests/test_files/ref/library_13_1.barcode_map.annotated.csv
@@ -116,39 +202,3 @@ tnseq2 count -f tests/test_files/L -n WISH_count_demo -o tests/test_data -tn GGA
 Input: sample counts csv, expreimental design table, control tags 
 Output: log2 FC for each gene according to experimental design, z-scores/pval relative to control tags. 
 
-
-## Steps:
-
-0. (optional) Demultiplexing
-1. Mapping
-2. Barcode Counting
-3. Analysis
- 
- 
-## Installation
-
-```
-conda env create -f tnseq_environment.yaml
-# mamba env create -f tnseq_environment.yaml
-conda activate tnseq2
-pip install -e . 
-
-```
-
-
-## Quick Start
-
-
-
-## Demultiplex
-
-## Map
-
-
-## Count
-
-### What you need:
-
-## Analysis
-
-## UNDER CONSTRUCTION
