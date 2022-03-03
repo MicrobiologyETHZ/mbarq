@@ -1,4 +1,4 @@
-# Analysis of large-throughput barcoded screen data
+# Analysis of barcoded mutagenesis / WITS data
 
 Example usage:
 
