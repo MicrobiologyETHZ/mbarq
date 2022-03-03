@@ -46,7 +46,7 @@ mbarq map -f <library_R1.fastq.gz> -g <host.fasta> -a <host.gff> -l 100
 
 **Output files**
 
-``library.map.annotated.csv``: final library map with annotations 
+``library.annotated.csv``: final library map with annotations 
 
 ``library.map.csv``: final library map without annotations 
 
@@ -110,9 +110,6 @@ Options:
 mbarq count  -f <sample.fastq.gz> -m <library_mapping_file.csv>
 ```
 
-**Output Files**
-- sample.?
-
 **All Options**
 
 ```shell
@@ -150,55 +147,4 @@ Options:
   -h, --help               Show this message and exit.
 
 ```
-
-
-### Merge barcode counts from multiple samples
-
-**Required Inputs**
-**Example Usage**
-
-```shell
-mbarq merge -i FILE[,FILE] | -d -o --annotation_cols [ID,Name,locus_tag]
-```
-
-
-### Filter samples with strong bottlenecks
-
-```shell
-
-mbarq bottleneck --controls_file --merged_counts --batch_file 
-
-```
-
-
-### Determine differentially abundant barcodes
-
-```shell
-
-mbarq analyse --controls_file --batch_file --merged_counts --batch_col --baseline 
---treat_col
-```
-
-        
-```
-tnseq2 count -f tests/test_files/dnaid2023_12_test.fasta -n count_demo -o tests/test_data -m tests/test_files/ref/library_13_1.barcode_map.annotated.csv
-```
-
-3. 
-
-```
-tnseq2 count -f tests/test_files/L -n WISH_count_demo -o tests/test_data -tn GGAGGTTCACAATGTGGGAGGTCA:40:0:after
-
-```
-
-
-### `tnseq2 merge`
-
- Input: directory with counts for different samples
- Output: 1 csv files with with all the sample counts to be used for the analysis
- 
-### `tnseq2 analyze`
-
-Input: sample counts csv, expreimental design table, control tags 
-Output: log2 FC for each gene according to experimental design, z-scores/pval relative to control tags. 
 

@@ -214,49 +214,51 @@ class Mapper(BarSeqData):
         unique = positions_sorted[~positions_sorted.index.isin(collision_index)]
 
         collisions = positions_sorted.iloc[collision_index]
+        if collisions.empty:
+            self.positions = unique[['barcode', 'total_count', 'sstart', 'sseqid', 'sstrand', 'multimap']]
+        else:
+            def row_to_barcode(structure, row):
+                bc = Barcode(structure)
+                bc.bc_seq = row.barcode
+                bc.chr = row.sseqid
+                bc.start = row.sstart
+                bc.strand = row.sstrand
+                bc.multimap = row.multimap
+                bc.count = row.total_count
+                return bc
 
-        def row_to_barcode(structure, row):
-            bc = Barcode(structure)
-            bc.bc_seq = row.barcode
-            bc.chr = row.sseqid
-            bc.start = row.sstart
-            bc.strand = row.sstrand
-            bc.multimap = row.multimap
-            bc.count = row.total_count
-            return bc
+            bcs = []
+            final_bcs = []
+            for i, r in collisions.iterrows():
+                bcs.append(row_to_barcode(self.barcode_structure, r))
 
-        bcs = []
-        final_bcs = []
-        for i, r in collisions.iterrows():
-            bcs.append(row_to_barcode(self.barcode_structure, r))
-
-        bc = bcs.pop(0)
-        cnt = bc.count
-        while len(bcs) > 0:
-            bc2 = bcs.pop(0)
-            if bc.chr != bc2.chr or abs(bc.start - bc2.start) > 5:
-                bc.count = cnt
-                final_bcs.append(bc)
-                bc = bc2
-                cnt = bc2.count
-            else:
-                if bc.editdistance(bc2) > self.edit_distance:
+            bc = bcs.pop(0)
+            cnt = bc.count
+            while len(bcs) > 0:
+                bc2 = bcs.pop(0)
+                if bc.chr != bc2.chr or abs(bc.start - bc2.start) > 5:
                     bc.count = cnt
                     final_bcs.append(bc)
                     bc = bc2
                     cnt = bc2.count
                 else:
-                    cnt += bc2.count
-                    if bc.count < bc2.count:
+                    if bc.editdistance(bc2) > self.edit_distance:
+                        bc.count = cnt
+                        final_bcs.append(bc)
                         bc = bc2
-        if bc not in final_bcs:
-            final_bcs.append(bc)
-        resolved_collisions = pd.DataFrame([[bc.chr, bc.start, bc.strand,
-                                             bc.bc_seq, bc.count, bc.multimap] for bc in final_bcs],
-                                           columns=['sseqid', 'sstart', 'sstrand', 'barcode', 'total_count',
-                                                    'multimap'])
-        self.positions = pd.concat([unique, resolved_collisions])[['barcode', 'total_count', 'sstart',
-                                                                   'sseqid', 'sstrand', 'multimap']]
+                        cnt = bc2.count
+                    else:
+                        cnt += bc2.count
+                        if bc.count < bc2.count:
+                            bc = bc2
+            if bc not in final_bcs:
+                final_bcs.append(bc)
+            resolved_collisions = pd.DataFrame([[bc.chr, bc.start, bc.strand,
+                                                 bc.bc_seq, bc.count, bc.multimap] for bc in final_bcs],
+                                               columns=['sseqid', 'sstart', 'sstrand', 'barcode', 'total_count',
+                                                        'multimap'])
+            self.positions = pd.concat([unique, resolved_collisions])[['barcode', 'total_count', 'sstart',
+                                                                       'sseqid', 'sstrand', 'multimap']]
         self.logger.info('------------------')
         self.logger.info("Finished mapping barcodes")
         self.logger.info(f"Final number of barcodes found: {self.positions.barcode.nunique()}")
@@ -341,60 +343,6 @@ class AnnotatedMap:
             self.logger.info('Finished finding overlaps between barcodes and features.')
         # todo remove unnecessary files
 
-    # def _find_annotation_overlaps(self):
-    #
-    #     """
-    #     Takes output of merge colliding bcs, turns it into bed file, then finds intersections with
-    #     annotation file.
-    #     Generates tab file with the following columns: chr | sstart | gff-info-field | barcode
-    #     """
-    #     self.logger.info('------------------')
-    #     self.logger.info('Annotating mapped barcodes. Only annotating barcodes inside/overlapping features of interest')
-    #     bed_map = self.positions.copy().reset_index()
-    #     bed_map['startOffBy1'] = bed_map['insertion_site'] - 1
-    #     bed_map[['chr', 'startOffBy1', 'insertion_site', 'barcode']].to_csv(self.temp_bed_file, sep='\t', index=False,
-    #                                                                         header=False)
-    #
-    #     command = f"bedtools intersect -wb -b {self.annotations} -a {self.temp_bed_file} " \
-    #               f" > {self.temp_bed_results_file}"
-    #     self.logger.info(f'bedtools command: {command}')
-    #     return_code = subprocess.check_call(command, shell=True)
-    #     if return_code != 0:
-    #         self.logger.error(f"Failed to run bedtools. "
-    #                           f"Return code: {return_code}")
-    #         sys.exit(1)
-    #     else:
-    #         self.logger.info('Finished finding overlaps between barcodes and features. '
-    #                          f'Results are in {self.temp_bed_results_file}')
-    #         # todo leave this file, it turned out to be useful for SATAY
-    #         #  -> if want to summarize over different intervals
-    #         # os.remove(self.temp_bed_file)
-
-    # def _find_closest_feature(self):
-    #     """
-    #     """
-    #     self.logger.info('------------------')
-    #     self.logger.info('Annotating mapped barcodes. Finding closest feature for each barcode')
-    #     bed_map = self.positions.copy().reset_index()
-    #     bed_map['startOffBy1'] = bed_map['insertion_site'] - 1
-    #     bed_map[['chr', 'startOffBy1', 'insertion_site', 'barcode']].to_csv(self.temp_bed_file, sep='\t', index=False,
-    #                                                                         header=False)
-    #     tmp_annotations = Path(self.annotations).with_suffix('.sorted.gff')
-    #     tmp_bed = self.temp_bed_file.with_suffix('.sorted.bed')
-    #     command = f"bedtools sort -i {self.temp_bed_file} > {tmp_bed};" \
-    #               f"bedtools sort -i {self.annotations} |grep ID=gene > {tmp_annotations};" \
-    #               f"bedtools closest -b {tmp_annotations} -a {tmp_bed} -d > {self.temp_bed_closest_file}"
-    #     self.logger.info(f'Bedtools command: {command}')
-    #     return_code = subprocess.check_call(command, shell=True)
-    #     if return_code != 0:
-    #         self.logger.error(f"Failed to run bedtools. "
-    #                           f"Return code: {return_code}")
-    #         sys.exit(1)
-    #     else:
-    #         self.logger.info('Finished finding features close to or overlapping barcodes')
-    #         os.remove(tmp_bed)
-    #         os.remove(tmp_annotations)
-    #         # os.remove(self.temp_bed_file)
 
     def _add_bedtools_results_to_positions(self, intersect=True):
         """
