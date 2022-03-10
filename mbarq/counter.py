@@ -28,6 +28,7 @@ class BarcodeCounter(BarSeqData):
         self.barcode_counter: Counter = collections.Counter()
         self.edit_distance: int = edit_distance
         self.annotated_cnts: pd.DataFrame = pd.DataFrame()
+        # Important to keep _mbarq in the final count file name -> used to get sample IDs during merge
         self.counts_file: Path = self.output_dir / f"{self.name}_mbarq_counts.csv"
         self.bc_annotations: pd.DataFrame = self._validate_annotations()
         self.validate_input()
@@ -131,6 +132,7 @@ class BarcodeCounter(BarSeqData):
                          f'have been merged: {self.merged}')
         cnts_df = (pd.DataFrame.from_dict(self.barcode_counter, orient='index')
                    .reset_index())
+        # Important to keep these column names, used for merging
         cnts_df.columns = ['barcode', 'barcode_count']
         cnts_df = cnts_df[cnts_df['barcode_count'] > 1]
         if cnts_df.empty:
@@ -152,7 +154,7 @@ class BarcodeCounter(BarSeqData):
             self.logger.info(f'Number of unannotated barcodes:{no_ids.shape[0]}')
 
     def _write_counts_file(self) -> None:
-        self.annotated_cnts.to_csv(self.counts_file)
+        self.annotated_cnts.to_csv(self.counts_file, index=False)
 
     def count_barcodes(self):
         self.logger.info('------------------')

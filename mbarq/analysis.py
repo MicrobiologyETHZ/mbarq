@@ -1,6 +1,7 @@
 import logging
 import collections
 import os
+import pandera.errors
 from typing import Optional, List, Union
 from mbarq.core import Barcode, BarSeqData
 from pathlib import Path
@@ -8,49 +9,52 @@ import pandas as pd
 import sys
 from mbarq.mbarq_logger import get_logger
 
-from pandera import Column, DataFrameSchema, Check, Index, SchemaError
+from pandera import Column, DataFrameSchema, Check, Index
 
 
 class CountDataSet:
 
     """
     Merge count files into one or if given one count file validate proper format
+
     """
     def __init__(self, count_files: Union[str, List[str]], name: str,
                  gene_column_name: str = '', sep=',', output_dir: str = ''):
-        self.count_files = count_files
-        self.gene_name = gene_column_name
-        self.sep = sep
-        self.countTable, self.sampleIDs = self.createCountTable()
         self.output_dir = Path(output_dir)
         self.name = name
         self.logger = get_logger('merging-log', self.output_dir / f"{self.name}_CountDataSet.log")
+        self.count_files = count_files
+        self.gene_name = gene_column_name
+        self.sep = sep
+        #self.countTable, self.sampleIDs = self.createCountTable()
+
 
     def _merge_count_files(self) -> pd.DataFrame:
         df_list = []
         sampleIDs = []
+        index_cols = []
         for count_file in self.count_files:
             sampleID = Path(count_file).stem.split("_mbarq")[0]
-            df = pd.read_table(Path(count_file), sep=self.sep, index_col=0)  # todo don't write down index in count step
+            df = pd.read_table(Path(count_file), sep=self.sep)
             if not self.gene_name:
-                df = df.iloc[:, [0, 1]]
-                df.columns = ['barcode', 'barcode_count']
+                df = df[['barcode', 'barcode_count']]
                 index_cols = ['barcode']
             elif self.gene_name and self.gene_name in df.columns:
-                gene_col_index = df.columns.get_loc(self.gene_name)
-                df = df.iloc[:, [0, 1, gene_col_index]]
-                df.columns = ['barcode', 'barcode_count', self.gene_name]
+                df = df[['barcode', 'barcode_count', self.gene_name]]
                 index_cols = ['barcode', self.gene_name]
             else:
-                self.logger.error(f'Gene name column provided is not found in the {Path(count_file).name}')
-                sys.exit(1)
+                self.logger.warning(f'Gene name column provided is not found in the {Path(count_file).name}. Skipping file')
+                continue
             df = df.assign(sampleID=sampleID).drop_duplicates()  # todo fix bug in counting that produces duplicates
             df_list.append(df)
             sampleIDs.append(sampleID)
+        if len(df_list) == 0 | len(index_cols) == 0:
+            self.logger.error(f'Could not process any of the files. Check that {self.gene_name} is correct')
+            sys.exit(1)
         fdf = pd.concat(df_list)
-        fdf = fdf.pivot(index=index_cols, columns='sampleID', values=fdf.columns[1]).fillna(0).reset_index()
-        if self.gene_name: # todo temp solution, should be addressed at mapping stage
-            fdf[self.gene_name] = fdf[self.gene_name.fillna(fdf['barcode'])]
+        fdf = (fdf.pivot(index=index_cols, columns='sampleID', values=fdf.columns[1])
+               .fillna(0)
+               .reset_index())
         return fdf
 
     def _validate_count_table(self, df_to_validate: pd.DataFrame) -> (pd.DataFrame, List[str]):
@@ -71,8 +75,8 @@ class CountDataSet:
         try:
             schema.validate(df_to_validate)
             return df_to_validate, df_to_validate.columns[-num_of_samples:]
-        except SchemaError:
-            logging.error('Invalid count data frame')
+        except pandera.errors.SchemaError:
+            self.logger.error('Invalid count data frame')
             sys.exit(1)
 
     def createCountTable(self):
