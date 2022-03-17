@@ -146,7 +146,7 @@ class BarcodeCounter(BarSeqData):
             self.logger.info(f'Annotating barcodes')
             self.logger.info(f'Columns found in the mapping/annotations file: '
                              f'{", ".join(self.bc_annotations.columns)}')
-            self.annotated_cnts = cnts_df.merge(self.bc_annotations, how='left', on='barcode')
+            self.annotated_cnts = cnts_df.merge(self.bc_annotations, how='left', on='barcode').drop_duplicates()
             filter_col = self.bc_annotations.columns[1]
             with_ids = self.annotated_cnts[self.annotated_cnts[filter_col].notnull()]
             self.logger.info(f'Number of annotated barcodes: {with_ids.shape[0]}')

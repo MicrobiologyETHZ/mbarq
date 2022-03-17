@@ -73,20 +73,28 @@ def main():
               help='input file for reads in forward orientation; FASTQ formatted; gz is ok.',
               metavar='FILE')
 @click.option('--genome', '-g', required=True, help='reference genome in FASTA format', metavar='FILE')
-@click.option('--gff', '-a', default='', help='annotation file in gff format', metavar='FILE')
+@click.option('--gff', '-a', default='', help='annotation file in GFF format', metavar='FILE')
 @click.option('--name', '-n', default='', help='unique library name, '
                                                'by default will try to use FASTQ filename', metavar='STR')
 @click.option('--transposon', '-tn',
               default="B17N13GTGTATAAGAGACAG",
               help="""\b
                      transposon construct structure, consisting of the following:
-                       1. conserved transposon sequence, eg. GTGTATAAGAGACAG
-                       2. barcode length, written as B[# of nt], eg. B17
+                       1. barcode length, written as B[# of nt], eg. B17
+                       2. conserved sequence motif, usually part of transposons inverted repeat (IR), eg. GTGTATAAGAGACAG
                        3. if there are extra nucleotides between barcode and 
-                          transposon sequence, indicate with N[# of nt], eg. N13
-                    Note: relative position of barcode and transpson matters, 
-                    the default represents the following construct:
-                    ---|BARCODE (17 nt)|--spacer (13 nt)--|GTGTATAAGAGACAG|---HOST--
+                          conserved sequence motif, indicate with N[# of nt], eg. N13
+                    The default represents the following construct:
+                    ----------------------------------------------------------------------------
+                    Read      ||AGTACTTTACTACTACT||TACCTGACCGTAA||GTGTATAAGAGACAG||TTACCTGACCGAC
+                    ----------||-----------------||-------------||---------------||-------------
+                    Components||     barcode     ||   spacer    ||    conserved  ||     host    
+                              ||                 ||             ||    motif (IR) ||               
+                    ----------||-----------------||-------------||---------------||-------------
+                    Encoding  ||       B17       ||     N13     ||GTGTATAAGAGACAG||              
+                    ----------------------------------------------------------------------------
+                    Note: relative position of barcode and conserved sequence motif matters, i.e. if conserved sequence motif comes before the barcode,
+                    it should be written as GTGTATAAGAGACAGN13B17.
                      [B17N13GTGTATAAGAGACAG]
               
                    """, metavar='STR')
@@ -95,15 +103,15 @@ def main():
               help='filter out barcodes supported by [INT] or less reads [0]', metavar="INT")
 #@click.option('--blast_threads', '-t', default=4, help='Blast Threads')
 @click.option('--feat_type', '-ft', default='gene',
-              help='feature type in the gff file to be used for annotation, e.g. gene, exon, CDS [gene]',
+              help='feature type in the GFF file to be used for annotation, e.g. gene, exon, CDS [gene]',
               metavar="STR")
-@click.option('--identifiers', default='ID,Name,locus_tag',
-              help='Feature identifiers to extract from annotation file [ID,Name,locus_tag]', metavar="STR[,STR]")
+@click.option('--attributes', default='ID,Name,locus_tag',
+              help='Feature attributes to extract from GFF file [ID,Name,locus_tag]', metavar="STR[,STR]")
 @click.option('--closest_gene',  is_flag=True,
               help='for barcodes not directly overlapping a feature, report the closest feature [False]')
 def map(forward, gff, name, transposon, out_dir, genome, filter_low_counts,
-        feat_type, identifiers, closest_gene):
-    identifiers = tuple(identifiers.split(','))
+        feat_type, attributes, closest_gene):
+    identifiers = tuple(attributes.split(','))
     mapper = Mapper(forward, transposon, genome=genome, name=name, output_dir=out_dir)
     mapper.map_insertions(filter_below=filter_low_counts)
     if gff:
@@ -127,12 +135,12 @@ def map(forward, gff, name, transposon, out_dir, genome, filter_low_counts,
 @click.option('--feat_type', '-ft', default='gene',
               help='feature type in the gff file to be used for annotation, e.g. gene, exon, CDS [gene]',
               metavar="STR")
-@click.option('--identifiers',  default='ID,Name,locus_tag',
-              help='Feature identifiers to extract from annotation file [ID,Name,locus_tag]', metavar="STR[,STR]")
+@click.option('--attributes',  default='ID,Name,locus_tag',
+              help='Feature attributes to extract from annotation file [ID,Name,locus_tag]', metavar="STR[,STR]")
 @click.option('--closest_gene', is_flag=True,
               help='for barcodes not directly overlapping a feature, report the closest feature [False]')
-def annotateMapped(barcode_file, gff, name,  out_dir, feat_type, identifiers, closest_gene):
-    identifiers = tuple(identifiers.split(','))
+def annotate_mapped(barcode_file, gff, name,  out_dir, feat_type, attributes, closest_gene):
+    identifiers = tuple(attributes.split(','))
     annotatedMap = AnnotatedMap(map_file=barcode_file, annotation_file=gff,
                                 feature_type=feat_type, identifiers=identifiers,
                                 name=name, output_dir=out_dir)
@@ -145,27 +153,35 @@ def annotateMapped(barcode_file, gff, name,  out_dir, feat_type, identifiers, cl
               help='input file for reads in forward orientation; FASTQ formatted; gz is ok.',
               metavar='FILE')
 @click.option('--mapping_file', '-m', default='',
-              help='Barcode map/annotation file in csv format.'
-                   'First column must be titled "barcode", and contain the barcode sequences. [optional] \n\n'
+              help='Mapping file produced by `mbarq map`. Alternatively, will accept any csv file, where  '
+                   'the first column is titled "barcode", and contains the barcode sequences. \n\n'
                    'Example: \n\n'
                    'barcode,barcodeID\n'
-                   'AGACCAGTACATGACGGGTATCTCTCTGCCACTCCTGTAT,Tag_1\n\n ', metavar='FILE')
+                   'AGACCAGTACATGACGGGTATCTCTCTGCCACTCCTGTAT,Tag_1\n '
+                   '[optional] ', metavar='FILE')
 @click.option('--out_dir', '-o', default='.', help='output directory [.]', metavar="DIR")
 @click.option('--name', '-n', default='', help='unique library name, '
                                                'by default will try to use FASTQ filename', metavar='STR')
 @click.option('--transposon', '-tn',
               default="B17N13GTGTATAAGAGACAG",
               help="""\b
-                    transposon construct structure, consisting of the following:
-                       1. conserved transposon sequence, eg. GTGTATAAGAGACAG
-                       2. barcode length, written as B[# of nt], eg. B17
+                     transposon construct structure, consisting of the following:
+                       1. barcode length, written as B[# of nt], eg. B17
+                       2. conserved sequence motif, usually part of transposons inverted repeat (IR), eg. GTGTATAAGAGACAG
                        3. if there are extra nucleotides between barcode and 
-                          transposon sequence, indicate with N[# of nt], eg. N13
-                    Note: relative position of barcode and transpson matters, 
-                    the default (RBSeq tn) represents the following construct:
-                    ---|BARCODE (17 nt)|--spacer (13 nt)--|GTGTATAAGAGACAG|---HOST--
+                          conserved sequence motif, indicate with N[# of nt], eg. N13
+                    The default represents the following construct:
+                    ----------------------------------------------------------------------------
+                    Read      ||AGTACTTTACTACTACT||TACCTGACCGTAA||GTGTATAAGAGACAG||TTACCTGACCGAC
+                    ----------||-----------------||-------------||---------------||-------------
+                    Components||     barcode     ||   spacer    ||    conserved  ||     host    
+                              ||                 ||             ||    motif (IR) ||               
+                    ----------||-----------------||-------------||---------------||-------------
+                    Encoding  ||       B17       ||     N13     ||GTGTATAAGAGACAG||              
+                    ----------------------------------------------------------------------------
+                    Note: relative position of barcode and conserved sequence motif matters, i.e. if conserved sequence motif comes before the barcode,
+                    it should be written as GTGTATAAGAGACAGN13B17. For WISH data, use GGAGGTTCACAATGTGGGAGGTCAB40
                      [B17N13GTGTATAAGAGACAG]
-                     For WISH use GGAGGTTCACAATGTGGGAGGTCAB40
                      
                     """, metavar='STR')
 @click.option('--edit_distance', '-e', default=2,
@@ -176,23 +192,6 @@ def count(forward, mapping_file, out_dir, transposon, name, edit_distance):
     counter.count_barcodes()
 
 
-# # # Custom
-# # @main.command()
-# # @click.option('--config', '-c', default='configs/map_config.yaml', help='Configuration File')
-# # @click.option('--local',  is_flag=True, help="Run on local machine")
-# # @click.option('--dry',  is_flag=True, help="Show commands without running them")
-# # @click.option('--method', '-m',  help='Run custom command, for testing mode')
-# # def custom(config, local, dry, method):
-# #     click.echo("Mapping Barcode Libraries")
-# #     click.echo(f"Config file: {config}")
-# #     click.echo("Samples found: ")
-# #     click.echo("Running {}".format('locally' if local else 'on cluster'))
-# #     cmd = snakemake_cmd(config, method, dry, local)
-# #     click.echo(" ".join(cmd))
-# #
-# #
-#
-#
 # # MERGE
 # @main.command(short_help="merge counts from multiple samples. Under construction.")
 # @click.option('--count_dir', '-d', help='Input directory with count files')

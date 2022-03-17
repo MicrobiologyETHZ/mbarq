@@ -7,6 +7,8 @@ dependencies:
   - python==3.8.*
   - blast==2.9.*
   - bedtools==2.30.*
+  - biopython==1.79
+  - pandas==1.3.3
   - pytest
   - click
   - pip

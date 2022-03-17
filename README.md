@@ -1,4 +1,4 @@
-# Analysis of barcoded mutagenesis / WITS data
+# Analysis of BarSeq Data
 
 Example usage:
 
