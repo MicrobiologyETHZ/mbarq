@@ -198,3 +198,38 @@ Options:
 
 ```
 
+## Merge: merge count files from multiple samples with `mbarq merge`
+
+**Required Inputs**
+
+- **EITHER** a comma-separated list of count files to be merged **OR** a path to the directory containing all the count file to be merged.
+- Prefix for the output file.
+
+**Sugested Inputs**
+- If you would like to keep one of the annotation (attribute) columns from the mapping file, it can be specified with `-a` option. 
+
+**Output file**
+- `csv` file, where columns are barcodes, attribute if specified, and one column containing counts for each sample
+
+**Example Usage**
+```shell
+mbarq merge -d <directory_with_count_files> -a locus_tag -n Experiment1 -o .
+```
+
+**All Options**
+
+```
+Usage: mbarq merge <options>
+
+Options:
+  -i, --input_files FILE[,FILE]  list of mBARq count files to merge (comma
+                                 separated)
+  -d, --count_dir DIR            merge all files in the directory
+  -o, --out_dir DIR              output directory
+  -n, --name STR                 output file prefix
+  -a, --attribute STR            Feature attribute to keep in the merged file
+                                 (ex. ID, Name, locus_tag)
+  -h, --help                     Show this message and exit.
+
+```
+

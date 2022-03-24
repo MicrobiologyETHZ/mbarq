@@ -26,8 +26,8 @@ class CountDataSet:
         self.count_files = count_files
         self.gene_name = gene_column_name
         self.sep = sep
-        #self.countTable, self.sampleIDs = self.createCountTable()
-
+        self.count_table = pd.DataFrame
+        self.sampleIDs: List[str] = []
 
     def _merge_count_files(self) -> pd.DataFrame:
         df_list = []
@@ -58,34 +58,32 @@ class CountDataSet:
         return fdf
 
     def _validate_count_table(self, df_to_validate: pd.DataFrame) -> (pd.DataFrame, List[str]):
-        # first needs to be a string, second also string, nulls should not be allowed
+        # first needs to be a string, second also string if self.gene_name is provided, nulls should not be allowed
         # rest should be floats or ints
-        num_of_columns = len(df_to_validate.columns)
-        num_of_samples = num_of_columns-2 if self.gene_name else num_of_columns-1
-        annotation_validations = [Column(str), Column(str)]
-        sample_validations = [Column(float)]*num_of_samples
-        col_validations = annotation_validations + sample_validations
-        col_validation_dict = {col_name: col_validation for col_name, col_validation in
-                               zip(df_to_validate.columns, col_validations)}
+        sample_cols = df_to_validate.columns[2:] if self.gene_name else df_to_validate.columns[1:]
+        barcode_val = {df_to_validate.columns[0]: Column(str)}
+        gene_val = {df_to_validate.columns[1]: Column(str, nullable=True)} if self.gene_name else {}
+        sample_val = {sample_col: Column(float) for sample_col in sample_cols}
+        validation_dict = {**barcode_val, **gene_val, **sample_val}
         schema = DataFrameSchema(
-            col_validation_dict,
+            validation_dict,
             strict=True,
             coerce=False,
         )
         try:
             schema.validate(df_to_validate)
-            return df_to_validate, df_to_validate.columns[-num_of_samples:]
+            return df_to_validate, sample_cols
         except pandera.errors.SchemaError:
             self.logger.error('Invalid count data frame')
             sys.exit(1)
 
-    def createCountTable(self):
-        if type(self.count_files) == str:
-            df_to_validate = pd.read_table(self.count_files, sep=self.sep)
-            return self._validate_count_table(df_to_validate)
+    def create_count_table(self):
+        if type(self.count_files) == list:
+            df_to_validate = self._merge_count_files()
         else:
-            countTable = self._merge_count_files()
-            return self._validate_count_table(countTable)
+            df_to_validate = pd.read_table(self.count_files, sep=self.sep)
+        self.count_table, self.sampleIDs = self._validate_count_table(df_to_validate)
+        self.count_table.to_csv(self.output_dir/f"{self.name}_mbarq_merged_counts.csv", index=False)
 
 
 class DesignMatrix:

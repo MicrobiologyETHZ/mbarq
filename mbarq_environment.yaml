@@ -12,4 +12,5 @@ dependencies:
   - pytest
   - click
   - pip
+  - pandera
 

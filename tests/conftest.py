@@ -1,6 +1,7 @@
 import subprocess
 import shlex
 import pytest
+from pathlib import Path
 
 @pytest.fixture
 def tn5_structure():
@@ -35,6 +36,12 @@ def count_test_data_wish():
     seq_file = f'./tests/test_files/LibraryA_pilot2.fq.gz'
     map_file = f'./tests/test_files/20210520_BarcodeList.csv'
     return (seq_file, map_file)
+
+
+@pytest.fixture
+def merge_test_data_tn5():
+    count_files = [f for f in Path("./tests/test_files/").glob("dnaid1315_*_mbarq_counts.csv")]
+    return count_files, 'Name'
 
 
 def capture(command_str):

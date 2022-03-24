@@ -6,7 +6,8 @@ import sys
 import logging
 from mbarq.mapper import Mapper, AnnotatedMap
 from mbarq.counter import BarcodeCounter
-
+from mbarq.analysis import CountDataSet
+import sys
 
 class DefaultHelp(click.Command):
     def __init__(self, *args, **kwargs):
@@ -146,8 +147,9 @@ def annotate_mapped(barcode_file, gff, name,  out_dir, feat_type, attributes, cl
                                 name=name, output_dir=out_dir)
     annotatedMap.annotate(intersect=not closest_gene)
 
-
-# COUNT
+###########
+#  COUNT  #
+###########
 @main.command(cls=DefaultHelp, short_help="\tcount barcodes in a sequencing file", options_metavar='<options>')
 @click.option('--forward', '-f', required=True,
               help='input file for reads in forward orientation; FASTQ formatted; gz is ok.',
@@ -192,18 +194,28 @@ def count(forward, mapping_file, out_dir, transposon, name, edit_distance):
     counter.count_barcodes()
 
 
-# # MERGE
-# @main.command(short_help="merge counts from multiple samples. Under construction.")
-# @click.option('--count_dir', '-d', help='Input directory with count files')
-# @click.option('--meta_file', '-m', default='', help='Meta file, format: ...')
-# @click.option('--control_file', '-b', default='', help="File with WITS info, format: ...")
-# # @click.option('--out_file', '-o', default='', help='Output Directory')
-# @click.option('--runid', '-n', default='', help='Run/Experiment Name')
-# def merge(config, count_dir, meta_file, control_file, runid):
-#     logging.info(f"You've provided a counts directory: {count_dir}")
-#     final_merge(count_dir, meta_file, control_file, runid)
-#
-#
+###########
+#  MERGE  #
+###########
+@main.command(cls=DefaultHelp, short_help="\tmerge count files", options_metavar='<options>')
+@click.option('--input_files', '-i', default='', help='list of mBARq count files to merge (comma separated)', metavar='FILE[,FILE]')
+@click.option('--count_dir', '-d', default='',  help='merge all files in the directory', metavar='DIR')
+@click.option('--out_dir', '-o', default='.', help='output directory', metavar='DIR')
+@click.option('--name', '-n',  help='output file prefix', metavar='STR')
+@click.option('--attribute', '-a',  default='',
+              help='Feature attribute to keep in the merged file (ex. ID, Name, locus_tag)', metavar="STR")
+def merge(input_files, count_dir, name, attribute, out_dir):
+    if not input_files and not count_dir:
+        sys.exit('Please specify files to merge or a directory with count files')
+    elif input_files:
+        input_files = [Path(f) for f in input_files.split(',')]
+    else:
+        input_files = [f for f in Path(count_dir).iterdir() if 'mbarq_counts' in f.name]
+    count_dataset = CountDataSet(count_files=input_files, name=name,
+                                 gene_column_name=attribute, output_dir=out_dir)
+    count_dataset.create_count_table()
+
+
 # @main.command(short_help="analyze transposons for differential abundance. Under construction")
 # @click.option('--config', '-c', default='configs/analyze_config.yaml', help='Configuration File')
 # def analyze():
