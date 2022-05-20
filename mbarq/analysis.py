@@ -10,7 +10,8 @@ import pandas as pd
 import sys
 from mbarq.mbarq_logger import get_logger
 from pandera import Column, DataFrameSchema, Check, Index
-
+import subprocess
+import shlex
 
 class CountDataSet:
 
@@ -92,6 +93,36 @@ class CountDataSet:
         self.cpms = self.cpms.apply(lambda x: np.log2(x/ x.sum() * 1000000 + 0.5) if np.issubdtype(x.dtype, np.number) else x)
 
 
+class SampleData:
+    def __init__(self, sample_data_csv:Union[Path, str], name, treatment_name,
+                 baseline: str, batch_name: str = '', output_dir='.'):
+        self.sample_data_csv = sample_data_csv
+        self.batch_name = batch_name
+        self.treatment_name = treatment_name
+        self.name = name
+        self.baseline = baseline
+        self.sampleData = pd.DataFrame()
+        self.output_dir = Path(output_dir)
+        self.logger = get_logger('sample-data-log', self.output_dir / f"{self.name}_SampleData.log")
+        self.contrasts = []
+        self.sampleIDs = []
+
+    def read_sample_data_csv(self):
+        self.sampleData = pd.read_csv(self.sample_data_csv)
+        sampleID = self.sampleData.columns[0]
+        schema_dict = {sampleID: Column(str),
+                       self.treatment_name: Column(str, [Check(lambda s: any(s.isin([self.baseline])))])}
+        if self.batch_name:
+            schema_dict[self.batch_name] = Column(str)
+        schema = DataFrameSchema(schema_dict, strict=False, coerce=False)
+        try:
+            schema.validate(self.sampleData)
+            self.contrasts = [c for c in self.sampleData[self.treatment_name].unique() if c != self.baseline]
+            self.sampleIDs = list(self.sampleData[sampleID].unique())
+        except pandera.errors.SchemaError:
+            self.logger.error('Invalid sample data frame')
+            sys.exit(1)
+
 
 class ControlBarcodes:
     """
@@ -145,135 +176,138 @@ class ControlBarcodes:
                 sys.exit(1)
 
 
-# class DesignMatrix:
-#     def __init__(self, count_files: List[str], design_table: str = '',
-#                  control: str = '', treatment: str = '',
-#                  batch_name: str = '', treatment_name: str = '',
-#                  cntrl_barcode_file: str = '',
-#                  ):
-#         self.count_files = [Path(count_file) for count_file in count_files]
-#         self.design_table = design_table
-#         self.cntrl_barcode_file = cntrl_barcode_file
-#
-#     def processDesignTable(self):
-#         pass
-#
-#     def read_in_sample_data(sample_data_file, sampleIDs, treatment_col="", batch_col=""):
-#         """
-#         add data validation code
-#
-#         """
-#         return pd.read_csv(sample_data_file)
-#
 class Experiment:
-    def __init__(self, countDataSet: CountDataSet, controlBarcodes: ControlBarcodes,
-                 batch_name: str = '', treatment_name: str = '',
-                 control: str = '', treatment: str = '',
-                 cntrl_barcode_file: str = '',
+    def __init__(self, name, countDataSet: CountDataSet, controlBarcodes: ControlBarcodes,
+                sampleData: SampleData,
+                 cutoff=0.8, output_dir='.'
                  ):
-        self.countDataSet = countDataSet
-        self.controlBarcodes = controlBarcodes
+        self.output_dir = Path(output_dir)
+        self.name = name
+        self.logger = get_logger('experiment-log', self.output_dir / f"{self.name}_Experiment.log")
+        self.cds = countDataSet
+        self.cbars = controlBarcodes
+        self.sd = sampleData
         self.wt_bc_conc_counts = pd.DataFrame()
         self.control_bc_counts = pd.DataFrame()
+        self.good_samples = []
+        self.corr_df = pd.DataFrame()
+        self.cutoff = cutoff
+        self.sampleIDs = [] # don't need this and self.good_samples refactor
+        self.batch_file = self.output_dir / f"{self.name}_batch.txt"
+        self.count_file = self.output_dir / f"{self.name}_count.txt"
+        self.mageck_bc_file = self.output_dir/ f"{self.name}_wt_barcodes.txt"
 
-    def _get_wt_bc_counts(self):
+    def _validate_experiment(self):
+        self.sampleIDs = set(self.cds.sampleIDs).intersection(set(self.sd.sampleIDs))
+        if len(self.sampleIDs) == 0:
+            self.logger.error('No matching sampleIDs between sample file and count file found')
+            sys.exit(1)
+
+    def _get_good_samples(self):
         """
         """
-        if not self.controlBarcodes.wt_bc_conc.empty:
-            self.wt_bc_conc_counts = (self.controlBarcodes.wt_bc_conc.merge(self.countDataSet.cpms,
+        if not self.cbars.wt_bc_conc.empty:
+            self.wt_bc_conc_counts = (self.cbars.wt_bc_conc.merge(self.cds.cpms,
                                                                             how='left', on='barcode')
-                                      .fillna(0))
+                                      .fillna(-1)) # cpms are in log, min val is log2(0.5)
+            concentrations = np.log2(self.wt_bc_conc_counts.concentration)
+            samples = self.wt_bc_conc_counts[self.cds.sampleIDs]
+            self.corr_df = pd.DataFrame(samples.corrwith(concentrations), columns=['R'])
+            self.corr_df["R2"] = self.corr_df.R ** 2
+            self.good_samples = [s for s in list(self.corr_df[self.corr_df.R2 > self.cutoff].index) if s in self.sampleIDs]
+        else:
+            self.good_samples = self.sampleIDs
 
-#     def runBatchCorrection(self):
-#         pass
-#
-#     def checkForBottlenecks(self):
-#         pass
-#
+    def prepare_mageck_dataset(self):
+        """
+        Assume the first column of sampleData contains sampleIDs.
+        Assume second has geneName
+        The rest are raw counts for samples in sampleIDs.
+        """
+        annotation_cols = list(self.cds.count_table.columns[0:2])
+        sampleID_col = self.sd.sampleData.columns[0]
+        sample_cols_to_keep = [sampleID_col, self.sd.treatment_name]
+        if self.sd.batch_name:
+            sample_cols_to_keep += [self.sd.batch_name]
+        batch_df = (self.sd.sampleData[self.sd.sampleData[sampleID_col].isin(self.good_samples)][sample_cols_to_keep]
+                    .sort_values([self.sd.treatment_name]))
+        batch_df.to_csv(self.batch_file, index=False, sep='\t')
+        magDf = self.cds.count_table[annotation_cols + self.good_samples].copy()
+        magDf.loc[magDf[annotation_cols[0]].isin(self.cbars.wt_barcodes), annotation_cols[1]] = 'control'
+        magDf = magDf.dropna(subset=annotation_cols).fillna(0)
+        magDf.to_csv(self.count_file, index=False, sep='\t')
+
+
+    def batch_correct(self, r_path=Path(__file__).parent.resolve()/"batchCorrect.R"):
+        """
+        Given count df only with good samples
+        sample data df (read in and validated somewhere else) with information about batches etc.
+        batch column name
+
+        """
+        cmd = f'Rscript {r_path} {self.count_file} {self.batch_file} {self.name} {self.output_dir}'
+        self.logger.info(cmd)
+        return_code = subprocess.check_call(shlex.split(cmd))
+        if return_code != 0:
+            self.logger.error(f"Batch Correction exited with return code {return_code}")
+            sys.exit(1)
+        self.count_file = self.output_dir / f"{self.name}_count.batchcorrected.txt"
+        self.logger.info(f"Batch Correction Complete")
+
+
+    def get_contrast_samples(self, treatment='d1', sampleID='sampleID'):
+        sDf = self.sd.sampleData[self.sd.sampleData[sampleID].isin(good_samples)]
+        controls = ",".join(sDf[sDf[self.sd.treatment_name] == self.sd.baseline][sampleID].unique())
+        treats = ",".join(sDf[sDf[self.sd.treatment_name] == treatment][sampleID].unique())
+        return controls, treats
+
+    def write_control_barcodes_to_file(self):
+        with open(self.mageck_bc_file, "w") as fo:
+            for bc in self.cbars.wt_barcodes:
+                fo.write(f"{bc}\n")
 
 #
-#     def calculate_correlation(self, control_df: pd.DataFrame, sampleIDs: List, cutoff: float = 0.8):
-#         """
-#         Given a data frame with a 'concentration' column and sampleID (normalised) counts + list of sampleIDs,
-#         calculate correlation between concentration
-#         return a list of 'good samples', i.e. passing the cutoff
-#
-#         Assert concentration column is present
-#         Assert sampleIDs are in control_df columns
-#         """
-#         concentrations = np.log2(control_df.concentration)
-#         samples = control_df[sampleIDs]
-#         corr_df = pd.DataFrame(samples.corrwith(concentrations), columns=['R'])
-#         corr_df["R2"] = corr_df.R ** 2
-#         good_samples = list(corr_df[corr_df.R2 > cutoff].index)
-#         return corr_df, good_samples
-#
-#     def prepare_mageck_dataset(counts_df, sampleData, control_barcodes, annotation_cols, good_samples, name,
-#                                batch_col, treatment_col, outDir):
-#
-#         """
-#
-#         Assume the first column of sampleData contains sampleIDs.
-#         Assume second has geneName
-#         The rest are raw counts for samples in sampleIDs.
-#
-#         """
-#
-#         batch_file = outDir / f"{name}_batch.txt"
-#         count_file = outDir / f"{name}_count.txt"
-#         sampleID_col = sampleData.columns[0]
-#
-#         batch_df = (sampleData[sampleData[sampleID_col].isin(good_samples)]
-#                     [[sampleID_col, batch_col, treatment_col]]
-#                     .sort_values([treatment_col, batch_col]))
-#
-#         batch_df.to_csv(batch_file, index=False, sep='\t')
-#         magDf = counts_df[annotation_cols + good_samples].copy()
-#         magDf.loc[magDf[annotation_cols[0]].isin(control_barcodes), annotation_cols[1]] = 'control'
-#         magDf = magDf.dropna(subset=annotation_cols).fillna(0)
-#         magDf.to_csv(count_file, index=False, sep='\t')
-#         return batch_file, count_file
-#
-#
-#     def batch_correct(outDir, name, r_path="../snippets/batchCorrect.R"):
-#         """
-#         Given count df only with good samples
-#         sample data df (read in and validated somewhere else) with information about batches etc.
-#         batch column name
-#
-#         """
-#         count_path = outDir / f"{name}_count.txt"
-#         batch_path = outDir / f"{name}_batch.txt"
-#         cmd = f'Rscript {r_path} {count_path} {batch_path} {name} {outDir}'
-#         print(cmd)
-#         r = run_command(cmd.split())
-#
-#     def get_contrast_samples(sampleData, good_samples, treat_col='day',
-#                              treatment='d1', control='d0', sampleID='sampleID'):
-#         sDf = sampleData[sampleData[sampleID].isin(good_samples)]
-#         controls = ",".join(sDf[sDf[treat_col] == control][sampleID].unique())
-#         treats = ",".join(sDf[sDf[treat_col] == treatment][sampleID].unique())
-#         return controls, treats
-#
-#     def run_mageck(count_file, treated, controls, out_prefix, control_barcode_file):
-#         """
-#         count file could be produced before or after batchcorrection
-#
-#         """
-#         cmd = (f"mageck test -k {count_file} -t {treated} "
-#                f"-c {controls}  -n {out_prefix} "
-#                f"--control-sgrna {control_barcode_file}  --normcounts-to-file")
-#         print(cmd)
-#         r = run_command(cmd.split())
-#
-#     def write_control_barcodes_to_file(wt_barcodes, name, outDir):
-#         fname = outDir / f"{name}_wt_barcodes.txt"
-#         with open(fname, "w") as fo:
-#             for bc in wt_barcodes:
-#                 fo.write(f"{bc}\n")
-#         return fname
-#
-#
+    def run_mageck(self, treated, controls, name):
+        """
+        count file could be produced before or after batchcorrection
+
+        """
+        if len(self.cbars.wt_barcodes) > 0:
+            cmd = (f"mageck test -k {self.count_file} -t {treated} "
+                   f"-c {controls}  -n {name} --norm-method control "
+                   f"--control-sgrna {self.mageck_bc_file}  --normcounts-to-file")
+        else:
+            cmd = (f"mageck test -k {self.count_file} -t {treated} "
+                   f"-c {controls}  -n {name} --norm-method median "
+                   f" --normcounts-to-file")
+
+        self.logger.info(cmd)
+        r = subprocess.check_call(cmd.split())
+
+    def run_all_contrasts(self):
+        for contrast in self.sd.contrasts:
+            self.logger.info(f"Running MAGeCK to compare {contrast} to {self.sd.baseline}")
+            controls, treats = self.get_contrast_samples(treatment=contrast)
+            name = f"{self.name}_{contrast}_vs_{self.sd.baseline}"
+            self.run_mageck(treats, controls, name)
+
+    def run_experiment(self):
+        self._get_good_samples(self)
+        self.prepare_mageck_dataset()
+        if self.sd.batch_name:
+            self.batch_correct()
+        if len(self.cbars.wt_barcodes) > 0:
+            self.write_control_barcodes_to_file()
+        self.run_all_contrasts()
+
+    def process_results(self):
+        res = pd.concat([pd.read_table(self.output_dir/ f"{self.name}_{i}_vs_{self.sd.baseline}.gene_summary.txt")
+                        .assign(contrast=i) for i in self.sd.contrasts])
+        fres = res[['id', 'num', 'neg|lfc', 'neg|fdr', 'pos|fdr', 'treat']]
+        fres.columns = ['Name', 'number_of_barcodes', 'LFC', 'neg_selection_fdr', 'pos_selection_fdr',
+                        'contrast']
+        fres.to_csv(self.outdir / f'{self.name}_rra_results.csv')
+
 #
 #     def clean_samples(self, merged_count_file, control_file):
 #         # Read in merged_count table and get sampleIDs

@@ -6,47 +6,44 @@ import pickle
 
 from test_utils import assert_files_are_same
 
-EXPDATA = "./tests/expected_outcomes/mapping"
-OUTDIR = "./tests/tmp"
-
-
-def test_extract_barcodes_tn5(tn5_structure, map_test_data):
+#EXPDATA = "./tests/expected_outcomes/mapping"
+TMP = "/Users/ansintsova/git_repos/mbarq/tests/tmp"
+def test_extract_barcodes_tn5(tn5_structure, map_test_data, dnaid1315_expected_outcomes):
     """Check ...."""
     r1, genome = map_test_data
     seq_data = Mapper(r1, tn5_structure, genome=genome)
     seq_data.extract_barcodes()
     barcodes = [(bc.bc_seq, bc.host) for bc in seq_data.barcodes]
-    with open(Path(EXPDATA)/'extract_barcode.pkl', 'rb') as f:
+    expected_file = dnaid1315_expected_outcomes/"extract_barcodes_tn5.pkl"
+    with open(expected_file, 'rb') as f:
         expected_barcodes = pickle.load(f)
     assert Counter(barcodes) == Counter(expected_barcodes)
 
 
 # todo test for _dereplicate_barcodes
 
-def test__write_barcodes_to_fasta(tn5_structure, map_test_data, tmpdir):
+def test__write_barcodes_to_fasta(tn5_structure, map_test_data, tmpdir, dnaid1315_expected_outcomes):
     r1, genome = map_test_data
     seq_data = Mapper(r1, tn5_structure, genome=genome, output_dir=tmpdir)
     seq_data.extract_barcodes()
     seq_data._write_barcodes_to_fasta()
-    outFasta = tmpdir.join("library_13_1_1.fasta")
-    expectedFasta = f'{EXPDATA}/prepare_extract_barcodes.fasta'
+    outFasta = tmpdir.join("library_11_1_FKDL202598974-1a-D701-AK1682_HHG5YDSXY_L4_subsample_1.fasta")
+    expectedFasta = f'{dnaid1315_expected_outcomes}/library_11_1_FKDL202598974-1a-D701-AK1682_HHG5YDSXY_L4_subsample_1.fasta'
     assert_files_are_same(outFasta, expectedFasta)
 
 # todo rename (expected) test files
 
-
-def test__blast_barcode_host_genome(tn5_structure, map_test_data, tmpdir):
-    global OUTDIR
+def test__blast_barcode_host_genome(tn5_structure, map_test_data, tmpdir, dnaid1315_expected_outcomes):
     r1, genome = map_test_data
     seq_data = Mapper(r1, tn5_structure, genome=genome, output_dir=tmpdir)
     seq_data.extract_barcodes()
     seq_data._write_barcodes_to_fasta()
     seq_data._blast_barcode_host()
-    out_blastn_file = tmpdir.join("library_13_1_1.blastn")
-    expected_blastn_file = f'{EXPDATA}/library_13_1_1.blastn'
+    out_blastn_file = tmpdir.join("library_11_1_FKDL202598974-1a-D701-AK1682_HHG5YDSXY_L4_subsample_1.blastn")
+    expected_blastn_file = dnaid1315_expected_outcomes/"library_11_1_FKDL202598974-1a-D701-AK1682_HHG5YDSXY_L4_subsample_1.blastn"
     assert_files_are_same(out_blastn_file, expected_blastn_file)
 
-
+# ------>>>>> STOPPED HERE
 def test__blast_barcode_host_genomedb(tn5_structure, map_test_data, tmpdir):
     r1, genome = map_test_data
     seq_data = Mapper(r1, tn5_structure, db=genome, output_dir=tmpdir)

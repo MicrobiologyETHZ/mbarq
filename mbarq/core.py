@@ -129,7 +129,7 @@ class Barcode:
 
 class BarSeqData:
     def __init__(self, sequencing_file: str, annotation_file: str = '', ) -> None:
-        self.seq_file = sequencing_file
+        self.seq_file = str(sequencing_file)
         self.annotations = Path(annotation_file)
         self.barcodes: List[Barcode] = []
 
