@@ -36,7 +36,6 @@ class Barcode:
         self.bc_before_tn: bool
         self.len_spacer: int
         # In theory these are optional
-        self.host: str
         self.start: Optional[int] = None  # todo don't need these, need insertion site
         self.end: Optional[int] = None
         self.chr: Optional[str] = None
@@ -133,7 +132,7 @@ class BarSeqData:
         self.annotations = Path(annotation_file)
         self.barcodes: List[Barcode] = []
 
-    def validate_input(self) -> None:
+    def _validate_input(self) -> None:
         if not Path(self.seq_file).is_file():
             raise InputFileError(f'{self.seq_file} could not be found')
 
@@ -144,7 +143,7 @@ class BarSeqData:
         :param infile:
         :return: Generator[FastA, None, None]
         """
-        self.validate_input()
+        self._validate_input()
         if self.seq_file.endswith('fq.gz') or self.seq_file.endswith('fastq.gz'):
             with gzip.open(self.seq_file, 'rt') as handle:
                 for header, sequence, qual in Bio.SeqIO.QualityIO.FastqGeneralIterator(handle):

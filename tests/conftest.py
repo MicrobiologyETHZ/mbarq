@@ -28,9 +28,10 @@ def sl1344_gff():
 
 @pytest.fixture
 def count_test_data_tn5():
-    seq_file = "./tests/test_files/dnaid2023_12_test.fasta"
-    map_file = "/Users/ansintsova/git_repos/mbarq/tests/test_files/library_13_1.barcode_map.annotated.csv"
-    return (seq_file, map_file)
+    small_count_file = root/"dnaid1315/test_data/count_test.fasta.gz"
+    seq_file = root/"dnaid1315/test_data/dnaid1315_124_subsample.fasta.gz"
+    map_file = root/"dnaid1315/ref/library_11_1.annotated.csv"
+    return (small_count_file, seq_file, map_file)
 
 
 @pytest.fixture
@@ -42,9 +43,19 @@ def count_test_data_wish():
 
 @pytest.fixture
 def merge_test_data_tn5():
-    count_files = [f for f in Path("./tests/test_files/").glob("dnaid1315_*_mbarq_counts.csv")]
+    count_files = [f for f in (root/"dnaid1315/ref").glob("dnaid1315_*_mbarq_counts.csv")]
     return count_files, 'Name'
 
+@pytest.fixture
+def analysis_test_data_tn5():
+    control1col = root/"dnaid1315/ref/controls_1col.csv"
+    control2col = root / "dnaid1315/ref/controls_2col.csv"
+    control3col = root / "dnaid1315/ref/controls_3col.csv"
+    control2col_short = root / "dnaid1315/ref/controls_2col_short.csv"
+    merged_counts = root/"dnaid1315/ref/example_mbarq_merged_counts.csv"
+    sample_data = root/"dnaid1315/ref/example_sample_data.csv"
+    no_wt = root/"dnaid1315/ref/controls_3col_no_wt.csv"
+    return control1col,control2col,control3col,control2col_short,merged_counts,sample_data, no_wt
 
 @pytest.fixture
 def dnaid1315_expected_outcomes():

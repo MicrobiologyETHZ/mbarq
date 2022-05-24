@@ -196,6 +196,7 @@ class Experiment:
         self.batch_file = self.output_dir / f"{self.name}_batch.txt"
         self.count_file = self.output_dir / f"{self.name}_count.txt"
         self.mageck_bc_file = self.output_dir/ f"{self.name}_wt_barcodes.txt"
+        self._validate_experiment()
 
     def _validate_experiment(self):
         self.sampleIDs = set(self.cds.sampleIDs).intersection(set(self.sd.sampleIDs))

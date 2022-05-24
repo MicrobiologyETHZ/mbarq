@@ -15,12 +15,12 @@ TMPDIR = Path("/Users/ansintsova/git_repos/mbarq/tests/tmp")
 EXPDATA = Path("/Users/ansintsova/git_repos/mbarq/tests/expected_outcomes/merging")
 
 
-def test__merge_count_files(merge_test_data_tn5, tmpdir):
+def test__merge_count_files(merge_test_data_tn5, tmpdir, dnaid1315_expected_outcomes):
     count_files, gene_name = merge_test_data_tn5
     name = 'TestingMerge'
     cds = CountDataSet(count_files=count_files, name=name, gene_column_name=gene_name, output_dir=tmpdir)
     fdf = cds._merge_count_files()
-    expected_csv = EXPDATA/"merge_tn5_no_validation.csv"
+    expected_csv = dnaid1315_expected_outcomes/"merge_tn5_no_validation.csv"
     out_file = tmpdir.join("merge_tn5_no_validation.csv")
     fdf.to_csv(out_file, index=False)
     assert_files_are_same(expected_csv, out_file)
@@ -67,18 +67,18 @@ def test__validate_count_table(merge_test_data_tn5, tmpdir):
         cds._validate_count_table(df3)
 
 
-def test_create_count_table(merge_test_data_tn5, tmpdir):
+def test_create_count_table(merge_test_data_tn5, tmpdir, dnaid1315_expected_outcomes):
     count_files, gene_name = merge_test_data_tn5
     name = 'TestCreateCountTable'
     cds = CountDataSet(count_files=count_files, name=name, gene_column_name=gene_name, output_dir=tmpdir)
     cds.create_count_table()
-    expected_csv = EXPDATA / "merge_tn5_no_validation.csv"
+    expected_csv = dnaid1315_expected_outcomes/ "TestCreateCountTable_mbarq_merged_counts.csv"
     out_file = tmpdir.join("TestCreateCountTable_mbarq_merged_counts.csv")
     assert_files_are_same(expected_csv, out_file)
 
-    count_files, gene_name = EXPDATA / "merge_tn5_no_validation.csv", 'Name'
+    count_files, gene_name = dnaid1315_expected_outcomes/ "TestCreateCountTable_mbarq_merged_counts.csv", 'Name'
     cds = CountDataSet(count_files=count_files, name=name, gene_column_name=gene_name, output_dir=tmpdir)
     cds.create_count_table()
-    expected_csv = EXPDATA / "merge_tn5_no_validation.csv"
+    expected_csv = dnaid1315_expected_outcomes/ "TestCreateCountTable_mbarq_merged_counts.csv"
     out_file = tmpdir.join("TestCreateCountTable_mbarq_merged_counts.csv")
     assert_files_are_same(expected_csv, out_file)

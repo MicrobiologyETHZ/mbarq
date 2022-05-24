@@ -31,7 +31,7 @@ class BarcodeCounter(BarSeqData):
         # Important to keep _mbarq in the final count file name -> used to get sample IDs during merge
         self.counts_file: Path = self.output_dir / f"{self.name}_mbarq_counts.csv"
         self.bc_annotations: pd.DataFrame = self._validate_annotations()
-        self.validate_input()
+        self._validate_input()
 
     def _validate_annotations(self) -> pd.DataFrame:
         """
