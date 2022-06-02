@@ -6,7 +6,7 @@ import sys
 import logging
 from mbarq.mapper import Mapper, AnnotatedMap
 from mbarq.counter import BarcodeCounter
-from mbarq.analysis import CountDataSet
+from mbarq.analysis import CountDataSet, Experiment
 import sys
 
 class DefaultHelp(click.Command):
@@ -216,10 +216,23 @@ def merge(input_files, count_dir, name, attribute, out_dir):
     count_dataset.create_count_table()
 
 
-# @main.command(short_help="analyze transposons for differential abundance. Under construction")
-# @click.option('--config', '-c', default='configs/analyze_config.yaml', help='Configuration File')
-# def analyze():
-#     pass
+@main.command(cls=DefaultHelp, short_help="analyze transposons for differential abundance. Under construction",  options_metavar='<options>')
+@click.option('--count_file', '-i',  help='count file produced by "merge"', metavar='FILE')
+@click.option('--sample_data', '-s',  help='sample data', metavar='FILE')
+@click.option('--control_file', '-c',  help='control barcode file', metavar='FILE')
+@click.option('--gene_name', '-g',  default='Name', help='Name of the column containing gene '
+                                                         'identifiers in the count file', metavar='STR')
+@click.option('--treatment_column',  help='column in sample data indicating treatmen', metavar='STR')
+@click.option('--batch_column',  help='column in sample data indicating batch', metavar='STR')
+@click.option('--baseline',  help='treatment to use as control/baseline, ex. day 0', metavar='STR')
+@click.option('--name', '-n', default='', help='experiment name, '
+                                               'by default will try to use count file name', metavar='STR')
+@click.option('--out_dir', '-o', default='.', help='output directory', metavar='DIR')
+def analyze(count_file, sample_data, gene_name, control_file, name,
+            treatment_column, baseline, batch_column, out_dir):
+    exp = Experiment(count_file, sample_data, control_file, name, gene_name, treatment_column,
+                     baseline, batch_column, 0.8, out_dir)
+    exp.run_experiment()
 
 
 if __name__ == "__main__":

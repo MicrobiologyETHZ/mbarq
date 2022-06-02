@@ -148,10 +148,7 @@ class ControlBarcodes:
         if self.barcode_csv:
             cntrl_df = pd.read_csv(self.barcode_csv, header=None)
             num_cols = cntrl_df.shape[1]
-            # Add column validation code here
-
             col_names = ['barcode', 'concentration', 'genotype']
-
             schema_dict = {"barcode": Column(str),
                           "concentration": Column(float),
                            "genotype": Column(str, [
@@ -177,35 +174,50 @@ class ControlBarcodes:
 
 
 class Experiment:
-    def __init__(self, name, countDataSet: CountDataSet, controlBarcodes: ControlBarcodes,
-                sampleData: SampleData,
-                 cutoff=0.8, output_dir='.'
-                 ):
+    def __init__(self, count_file, sample_data_file, control_file, name,
+                  gene_column, treatment_column, baseline, batch_column,
+                  cutoff=0.8, output_dir='.'):
         self.output_dir = Path(output_dir)
         self.name = name
+        self.sampleIDs = []  # don't need this and self.good_samples refactor
         self.logger = get_logger('experiment-log', self.output_dir / f"{self.name}_Experiment.log")
-        self.cds = countDataSet
-        self.cbars = controlBarcodes
-        self.sd = sampleData
+        self.cds = CountDataSet(count_file, name=name, gene_column_name=gene_column, output_dir=output_dir)
+        self.cbars = ControlBarcodes(control_file, output_dir=output_dir)
+        self.sd = SampleData(sample_data_file, name, treatment_column, baseline, batch_column, output_dir=output_dir)
+        self._initiate_experiment()
+
         self.wt_bc_conc_counts = pd.DataFrame()
         self.control_bc_counts = pd.DataFrame()
         self.good_samples = []
         self.corr_df = pd.DataFrame()
         self.cutoff = cutoff
-        self.sampleIDs = [] # don't need this and self.good_samples refactor
         self.batch_file = self.output_dir / f"{self.name}_batch.txt"
         self.count_file = self.output_dir / f"{self.name}_count.txt"
         self.mageck_bc_file = self.output_dir/ f"{self.name}_wt_barcodes.txt"
-        self._validate_experiment()
+        self.sampleID_col = self.sd.sampleData.columns[0]
 
-    def _validate_experiment(self):
+
+    def _initiate_experiment(self):
+        self.cds.create_count_table()
+        self.cds.calculate_cpms()
+        self.cbars.read_control_file()
+        self.sd.read_sample_data_csv()
         self.sampleIDs = set(self.cds.sampleIDs).intersection(set(self.sd.sampleIDs))
         if len(self.sampleIDs) == 0:
             self.logger.error('No matching sampleIDs between sample file and count file found')
             sys.exit(1)
 
     def _get_good_samples(self):
+
         """
+        If there is information about wt bc and concentrations,
+        calculate correlation between counts and concentrations,
+        only keep samples with R2 > self.cutoff
+
+        Else all samples are assumed to be good samples
+
+        Correlation is calculated between log2(CPMS + 0.5) and log2(concentration values)
+
         """
         if not self.cbars.wt_bc_conc.empty:
             self.wt_bc_conc_counts = (self.cbars.wt_bc_conc.merge(self.cds.cpms,
@@ -219,18 +231,18 @@ class Experiment:
         else:
             self.good_samples = self.sampleIDs
 
+
     def prepare_mageck_dataset(self):
         """
-        Assume the first column of sampleData contains sampleIDs.
-        Assume second has geneName
-        The rest are raw counts for samples in sampleIDs.
+        Assume the first column of sd.sampleData contains sampleIDs.
+        Assume first column of cds.count_table has barcodes and second has geneName
+        The rest of cds.count_table are raw counts for samples in sampleIDs.
         """
         annotation_cols = list(self.cds.count_table.columns[0:2])
-        sampleID_col = self.sd.sampleData.columns[0]
-        sample_cols_to_keep = [sampleID_col, self.sd.treatment_name]
+        sample_cols_to_keep = [self.sampleID_col, self.sd.treatment_name]
         if self.sd.batch_name:
             sample_cols_to_keep += [self.sd.batch_name]
-        batch_df = (self.sd.sampleData[self.sd.sampleData[sampleID_col].isin(self.good_samples)][sample_cols_to_keep]
+        batch_df = (self.sd.sampleData[self.sd.sampleData[self.sampleID_col].isin(self.good_samples)][sample_cols_to_keep]
                     .sort_values([self.sd.treatment_name]))
         batch_df.to_csv(self.batch_file, index=False, sep='\t')
         magDf = self.cds.count_table[annotation_cols + self.good_samples].copy()
@@ -255,11 +267,10 @@ class Experiment:
         self.count_file = self.output_dir / f"{self.name}_count.batchcorrected.txt"
         self.logger.info(f"Batch Correction Complete")
 
-
-    def get_contrast_samples(self, treatment='d1', sampleID='sampleID'):
-        sDf = self.sd.sampleData[self.sd.sampleData[sampleID].isin(good_samples)]
-        controls = ",".join(sDf[sDf[self.sd.treatment_name] == self.sd.baseline][sampleID].unique())
-        treats = ",".join(sDf[sDf[self.sd.treatment_name] == treatment][sampleID].unique())
+    def get_contrast_samples(self, treatment='d1'):
+        sDf = self.sd.sampleData[self.sd.sampleData[self.sampleID_col].isin(self.good_samples)]
+        controls = ",".join(sDf[sDf[self.sd.treatment_name] == self.sd.baseline][self.sampleID_col].unique())
+        treats = ",".join(sDf[sDf[self.sd.treatment_name] == treatment][self.sampleID_col].unique())
         return controls, treats
 
     def write_control_barcodes_to_file(self):
@@ -267,19 +278,19 @@ class Experiment:
             for bc in self.cbars.wt_barcodes:
                 fo.write(f"{bc}\n")
 
-#
-    def run_mageck(self, treated, controls, name):
+
+    def run_mageck(self, treated, controls, run_name):
         """
         count file could be produced before or after batchcorrection
-
         """
+        prefix = self.output_dir/run_name
         if len(self.cbars.wt_barcodes) > 0:
             cmd = (f"mageck test -k {self.count_file} -t {treated} "
-                   f"-c {controls}  -n {name} --norm-method control "
+                   f"-c {controls}  -n {prefix} --norm-method control "
                    f"--control-sgrna {self.mageck_bc_file}  --normcounts-to-file")
         else:
             cmd = (f"mageck test -k {self.count_file} -t {treated} "
-                   f"-c {controls}  -n {name} --norm-method median "
+                   f"-c {controls}  -n {prefix} --norm-method median "
                    f" --normcounts-to-file")
 
         self.logger.info(cmd)
@@ -289,75 +300,24 @@ class Experiment:
         for contrast in self.sd.contrasts:
             self.logger.info(f"Running MAGeCK to compare {contrast} to {self.sd.baseline}")
             controls, treats = self.get_contrast_samples(treatment=contrast)
-            name = f"{self.name}_{contrast}_vs_{self.sd.baseline}"
-            self.run_mageck(treats, controls, name)
+            run_name = f"{self.name}_{contrast}_vs_{self.sd.baseline}"
+            self.run_mageck(treats, controls, run_name)
+
+    def process_results(self):
+        res = pd.concat([pd.read_table(self.output_dir/ f"{self.name}_{i}_vs_{self.sd.baseline}.gene_summary.txt")
+                        .assign(contrast=i) for i in self.sd.contrasts])
+        fres = res[['id', 'num', 'neg|lfc', 'neg|fdr', 'pos|fdr', 'contrast']]
+        fres.columns = ['Name', 'number_of_barcodes', 'LFC', 'neg_selection_fdr', 'pos_selection_fdr',
+                        'contrast']
+        fres.to_csv(self.output_dir / f'{self.name}_rra_results.csv')
 
     def run_experiment(self):
-        self._get_good_samples(self)
+        self._get_good_samples()
         self.prepare_mageck_dataset()
         if self.sd.batch_name:
             self.batch_correct()
         if len(self.cbars.wt_barcodes) > 0:
             self.write_control_barcodes_to_file()
         self.run_all_contrasts()
+        self.process_results()
 
-    def process_results(self):
-        res = pd.concat([pd.read_table(self.output_dir/ f"{self.name}_{i}_vs_{self.sd.baseline}.gene_summary.txt")
-                        .assign(contrast=i) for i in self.sd.contrasts])
-        fres = res[['id', 'num', 'neg|lfc', 'neg|fdr', 'pos|fdr', 'treat']]
-        fres.columns = ['Name', 'number_of_barcodes', 'LFC', 'neg_selection_fdr', 'pos_selection_fdr',
-                        'contrast']
-        fres.to_csv(self.outdir / f'{self.name}_rra_results.csv')
-
-#
-#     def clean_samples(self, merged_count_file, control_file):
-#         # Read in merged_count table and get sampleIDs
-#         # Calculate cpms
-#         # Read in control file
-#         # Get control counts
-#         #wt_df, full_control_df = get_control_counts(cntrl_df, wt_barcodes, cpms, annotation_cols)
-#         # Figure out good samples
-#         # corr_df, good_samples = calculate_correlation(wt_df, sampleIDs)
-#         pass
-#
-#     def correlation_plots(self):
-#         pass
-#
-#     def run_analysis(self, counts, sample_data_file, good_samples, wt_df,
-#                      annotation_cols, name, batch_col='experiment', treatment_col='day',
-#                      contrasts=['d1', 'd2', 'd3', 'd4'], baseline='d0',
-#                      sampleID='sampleID',
-#                      outDir=scratchDir
-#                      ):
-#
-#         # Read in sample data
-#         sampleData = read_in_sample_data(sample_data_file, good_samples)
-#         wt_barcodes = wt_df.barcode.values
-#         # subset df on only good samples and write out to file
-#         batch_file, count_file = prepare_mageck_dataset(counts, sampleData, wt_barcodes,
-#                                                         annotation_cols, good_samples, name,
-#                                                         batch_col, treatment_col, outDir)
-#
-#         # run batch correction
-#         batch_correct(scratchDir, name, r_path="../snippets/batchCorrect.R")
-#
-#         fname = write_control_barcodes_to_file(wt_barcodes, name, scratchDir)
-#
-#         # run MAGeCK RRA for day 1
-#         contrasts_ran = []
-#         for contrast in contrasts:
-#             controls, treat = get_contrast_samples(sampleData, good_samples, treatment_col,
-#                                                    contrast, baseline, sampleID)
-#             count_file2 = count_file.with_suffix('.batchcorrected.txt')
-#             if len(treat) > 0 and len(controls) > 0:
-#                 run_mageck(count_file2, treat, controls, scratchDir / f"{name}-{contrast}", fname)
-#                 contrasts_ran.append(contrast)
-#             else:
-#                 continue
-#         res = pd.concat([pd.read_table(scratchDir / f"{name}-{i}.gene_summary.txt").assign(treat=i)
-#                          for i in contrasts_ran])
-#         fres = res[['id', 'num', 'neg|lfc', 'neg|fdr', 'pos|fdr', 'treat']]
-#         fres.columns = [annotation_cols[1], 'number_of_barcodes', 'LFC', 'neg_selection_fdr', 'pos_selection_fdr',
-#                         'contrast']
-#         fres.to_csv(scratchDir / f'{name}_rra_results.csv')
-#         return fres
