@@ -126,7 +126,7 @@ def test_batch_correction(analysis_test_data_tn5, tmpdir, dnaid1315_expected_out
     exp.prepare_mageck_dataset()
     exp.batch_correct()
     expected_count = dnaid1315_expected_outcomes/"test_batch_correction_count.batchcorrected.txt"
-    assert_files_are_same(exp.count_file, expected_count )
+    assert_files_are_same(exp.count_file, expected_count)
 
 
 def test_get_contrast_samples(analysis_test_data_tn5, tmpdir, dnaid1315_expected_outcomes):
@@ -203,4 +203,23 @@ def test_run_experiment(analysis_test_data_tn5, tmpdir, dnaid1315_expected_outco
     actual_rra = tmpdir.join("test_run_experiment_rra_results.csv")
     assert_files_are_same(actual_rra, expected_rra)
 
+OUTDIR= "/nfs/cds-peta/exports/biol_micro_cds_gr_sunagawa/scratch/ansintsova/Projects_NCCR/hardt/nguyenb/tnseq/scratch/tmp"
 
+def test_run_experiment_no_batch(analysis_test_data_tn5, tmpdir, dnaid1315_expected_outcomes):
+    _, _, _, controls, count_file, sample_file, _ = analysis_test_data_tn5
+    name = "test_run_experiment"
+    exp = Experiment(count_file, sample_file, controls, name, 'Name', 'day', 'd0', '', 0.8, tmpdir)
+    exp.run_experiment()
+    expected_rra = dnaid1315_expected_outcomes / "test_run_experiment_rra_results_no_batch.csv"
+    actual_rra = tmpdir.join("test_run_experiment_rra_results.csv")
+    assert_files_are_same(actual_rra, expected_rra)
+
+
+def test_run_experiment_no_control(analysis_test_data_tn5, tmpdir, dnaid1315_expected_outcomes):
+    _, _, _, controls, count_file, sample_file, _ = analysis_test_data_tn5
+    name = "test_run_experiment"
+    exp = Experiment(count_file, sample_file, '', name, 'Name', 'day', 'd0', 'experiment', 0.8, tmpdir)
+    exp.run_experiment()
+    expected_rra = dnaid1315_expected_outcomes / "test_run_experiment_rra_results_no_control.csv"
+    actual_rra = tmpdir.join("test_run_experiment_rra_results.csv")
+    assert_files_are_same(actual_rra, expected_rra)
