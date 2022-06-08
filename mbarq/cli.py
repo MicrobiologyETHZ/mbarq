@@ -102,7 +102,7 @@ def main():
 @click.option('--out_dir', '-o', default='.', help='output directory [.]', metavar="DIR")
 @click.option('--filter_low_counts', '-l', default=0,
               help='filter out barcodes supported by [INT] or less reads [0]', metavar="INT")
-#@click.option('--blast_threads', '-t', default=4, help='Blast Threads')
+@click.option('--blast_threads', '-t', default=4, help='Blast Threads', metavar="INT")
 @click.option('--feat_type', '-ft', default='gene',
               help='feature type in the GFF file to be used for annotation, e.g. gene, exon, CDS [gene]',
               metavar="STR")
@@ -111,10 +111,10 @@ def main():
 @click.option('--closest_gene',  is_flag=True,
               help='for barcodes not directly overlapping a feature, report the closest feature [False]')
 def map(forward, gff, name, transposon, out_dir, genome, filter_low_counts,
-        feat_type, attributes, closest_gene):
+        feat_type, attributes, closest_gene, blast_threads):
     identifiers = tuple(attributes.split(','))
     mapper = Mapper(forward, transposon, genome=genome, name=name, output_dir=out_dir)
-    mapper.map_insertions(filter_below=filter_low_counts)
+    mapper.map_insertions(filter_below=filter_low_counts, blast_threads=blast_threads)
     if gff:
         annotated_map = AnnotatedMap(map_file=mapper.map_file, annotation_file=gff,
                                      feature_type=feat_type,

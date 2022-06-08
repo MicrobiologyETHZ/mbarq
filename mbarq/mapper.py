@@ -265,10 +265,10 @@ class Mapper(BarSeqData):
         self.logger.info(f"Mean number of reads per barcode: {self.positions.total_count.mean()}")
         self.logger.info(f"Number of barcodes mapping to multiple locations: {self.positions.multimap.sum()}")
 
-    def map_insertions(self, min_host_bases=20, filter_below=100):
+    def map_insertions(self, min_host_bases=20, filter_below=100, blast_threads=4):
         self.extract_barcodes(min_host_bases=min_host_bases)
         self._write_barcodes_to_fasta()
-        self._blast_barcode_host(4)
+        self._blast_barcode_host(blast_threads)
         self._find_most_likely_positions(filter_below=filter_below)
         self._merge_colliding_barcodes()
         rename_dict = {'sstart': 'insertion_site',
