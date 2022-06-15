@@ -7,6 +7,7 @@ import logging
 from mbarq.mapper import Mapper, AnnotatedMap
 from mbarq.counter import BarcodeCounter
 from mbarq.analysis import CountDataSet, Experiment
+from mbarq.demux import demux_barseq
 import sys
 
 class DefaultHelp(click.Command):
@@ -36,33 +37,16 @@ def main():
     """
 
 
-#
-# # DEMUX
-# @main.command(help='demultiplex RBSeq fastq files')
-# @click.option('--config', '-c', help='Configuration File')
-# @click.option('--input_file', '-i', help='Input FASTQ to demultiplex')
-# @click.option('--demux_file', '-d', help='Barcode Map, tab delimited, ex.\n\nACCT\tSample1\n\nAAGG\tSample2\n')
-# @click.option('--out_dir', '-o', default='.', help='Output Directory')
-# @click.option('--transposon', '-tn', default="GTGTATAAGAGACAG:17:13:before", help='Construct Structure:\n\n'
-#                                                                                   'TN sequence:BC length:length of spacer between BC and TN sequence:BC position relative to TN \n\n'
-#                                                                                   'Default: GTGTATAAGAGACAG:17:13:before')
-# @click.option('--name', '-n', default='', help="Sample Name")
-# @click.option('--rc', is_flag=True, help="Reverse complement the barcodes")
-# @click.option('--dry', is_flag=True, help="Show commands without running them")
-# @click.option('--local', is_flag=True, help="Run on local machine")
-# def demux(config, input_file, demux_file, out_dir, rc, transposon, dry, local, name):
-#     if (config or input_file) and not (config and input_file):
-#         if config:
-#             print(f'Your provided a config file: {config}')
-#             # click.echo("Running {}".format('locally' if local else ('dry' if dry else 'on cluster')))
-#             # cmd = snakemake_cmd(config, 'demux_all', dry, local)
-#             # click.echo(" ".join(cmd))
-#         else:
-#             print(f"You've provided a FASTQ file: {input_file}")
-#             demux_tnseq(input_file, demux_file, out_dir, name, transposon, rc)
-#     else:
-#         print('Provide either config or FASTQ file, not both')
-#         sys.exit(1)
+
+# DEMUX
+@main.command(help='Demultiplex fastq files')
+@click.option('--input_file', '-i', help='Input FASTQ to demultiplex')
+@click.option('--demux_file', '-d', help='Barcode Map, tab delimited, ex.\n\nSample1\tACTGACTG\n\nSample2\tGTCAGTCA\n')
+@click.option('--out_dir', '-o', default='.', help='Output Directory')
+@click.option('--name', '-n', default='', help="Sample Name")
+@click.option('--rc', is_flag=True, help="Reverse complement the barcodes")
+def demux(input_file, demux_file, out_dir, rc, name):
+    demux_barseq(input_file, demux_file, out_dir, name, rc)
 
 
 ##########

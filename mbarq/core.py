@@ -136,6 +136,19 @@ class BarSeqData:
         if not Path(self.seq_file).is_file():
             raise InputFileError(f'{self.seq_file} could not be found')
 
+    def stream_fastq_file(self):
+        self._validate_input()
+        if self.seq_file.endswith('fq.gz') or self.seq_file.endswith('fastq.gz'):
+            with gzip.open(self.seq_file, 'rt') as handle:
+                for record in Bio.SeqIO.parse(handle, 'fastq'):
+                    yield record
+        elif self.seq_file.endswith('fq') or self.seq_file.endswith('fastq'):
+            with open(self.seq_file) as handle:
+                for record in Bio.SeqIO.parse(handle, 'fastq'):
+                    yield record
+        else:
+            raise Exception(f'{self.seq_file} not a FASTQ file.')
+
     def stream_seq_file(self) -> Generator[FastA, None, None]:
         """
         Read a fastq file either gzipped or not and return it as a stream of tuples
