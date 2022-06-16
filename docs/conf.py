@@ -17,7 +17,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'mbarq'
+project = 'mBARq'
 copyright = '2022, Sunagawa Group'
 author = 'Sunagawa Group'
 import sys
