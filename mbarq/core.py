@@ -100,13 +100,12 @@ class Barcode:
         -----|-17bp--|---13bp---|---------15bp--------|----?--------
          ---(-30)---(-13)-------(0)---------------------------------
         '''
-
         splits: List[str] = r1.sequence.split(self.tn_seq)  # check that tn in sequence?
         self.bc_seq = ''
         self.host = ''
         if self.bc_before_tn:
             bc_start = -(self.bc_len + self.len_spacer)
-            bc_end = -self.len_spacer
+            bc_end = None if self.len_spacer == 0 else -self.len_spacer
             bc_seq = splits[0]
             host_seq = splits[1]
         else:

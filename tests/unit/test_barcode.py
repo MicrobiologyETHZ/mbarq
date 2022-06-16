@@ -1,4 +1,4 @@
-from mbarq.core import Barcode, BarSeqData
+from mbarq.core import Barcode, BarSeqData, FastA
 
 # Methods are _parse_structure, extract_barcode_host and editdistance
 
@@ -19,6 +19,12 @@ def test__parse_structure():  # todo !!!!
     assert barcode.len_spacer == 0
     assert barcode.bc_before_tn is False
 
+    barcode = Barcode('B20CGTACGCTGCAGGTC')
+    assert barcode.bc_len == 20
+    assert barcode.tn_seq == 'CGTACGCTGCAGGTC'
+    assert barcode.len_spacer == 0
+    assert barcode.bc_before_tn is True
+
 
 def test_extract_barcode_host_rbseq(tn5_structure, map_test_data):
     r1, genome = map_test_data
@@ -32,6 +38,17 @@ def test_extract_barcode_host_rbseq(tn5_structure, map_test_data):
     assert out_barcode == expected_barcode
     assert out_host == expected_host
 
+
+def test_extract_barcode_host_dbauer():
+
+    r1 = FastA('read', "TTGGTGCGCCCTGCAGGGATGTCCACGAGGTCTCTTCTGTACAAAGGGAACTTTGCGTACGCTGCAGGTCGACGGCCGGCCAGACCGGGGACTTATCAGCCAACCTGTTAAAGCCCAAATCAAAATAGTTGGGGCCC")
+    barcode = Barcode('B20CGTACGCTGCAGGTC')
+    barcode.extract_barcode_host(r1)
+    expected_barcode = "TCTGTACAAAGGGAACTTTG"
+    expected_host = "GACGGCCGGCCAGACCGGGGACTTATCAGCCAACCTGTTAAAGCCCAAATCAAAATAGTTGGGGCCC"
+    out_barcode, out_host = barcode.bc_seq, barcode.host
+    assert out_barcode == expected_barcode
+    assert out_host == expected_host
 
 # todo add tests for WISH barcode structure
 
