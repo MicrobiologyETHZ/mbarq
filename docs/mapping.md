@@ -1,26 +1,20 @@
 # Map
 
-## Identify insertion sites for barcodes sequencing library with `mbarq map`
+## Identify insertion sites for barcoded sequencing library with `mbarq map`
 
-### Required inputs:
+### Input/Output Files:
 
-- FASTQ file generated from sequencing randomly barcoded mutant library
+**Required Inputs**
+
+- FASTQ file generated from sequencing barcoded mutant library
 - genome FASTA file of the bacteria used to generate the library
 - Transposon construct structure **add diagram**.
 
-### Suggested inputs:
+**Suggested inputs**
 
 - Annotation file in GFF3 format (this will allow mapping insertion sites to genomic features). 
-- Filtering parameter (``-l``, in our hands, filtering barcodes supported by less than 100 reads produced reliable library annotations. This is likely to be dataset dependent, and should be tested for each use case).
+- Filtering parameter (``-l``, in our hands, filtering barcodes supported by less than 100 reads produced reliable library annotations. This of course is dependent on depth of the sequencing, and should be tested for each use case).
 - Report closest gene (``-c``). If ``gff`` files is provided, by default, ``mbarq`` will only report features overlaping the insertion site. In addition, ``mbarq`` can report the location and distance of the closest downstream feature for barcodes that do not directly overlap any features. 
-
-**Example Usage**
-
-```shell
-
-mbarq map -f <library_R1.fastq.gz> -g <host.fasta> -a <host.gff> -l 100
-
-```
 
 **Output files**
 
@@ -34,7 +28,17 @@ mbarq map -f <library_R1.fastq.gz> -g <host.fasta> -a <host.gff> -l 100
 ``library.fasta``: fasta files of barcodes and host sequences (>barcode\nhostsequence); 
 ``library.output.bed``: bedtools intersection of gff and barcode locations
 
-**All Options**
+
+### Example Usage
+
+```shell
+
+mbarq map -f <library_R1.fastq.gz> -g <host.fasta> -a <host.gff> -l 100 \ 
+-n LibraryName -tn B17N13GTGTATAAGAGACAG
+
+```
+
+### All Options
 
 ```
 Usage: mbarq map <options>
@@ -81,14 +85,14 @@ Options:
 
 Library map file `library.map.csv` can be re-annotated (for example, if you would like to use different feature type or attributes) without re-mapping using `mbarq annotate-mapped`. 
 
-**Example Usage**
+### Example Usage
 ```shell
 
 mbarq annotate-mapped -i <library.map.csv> -a <host.gff> -ft gene --attributes ID,Name,locus_tag
 
 ```
 
-**All Options**
+### All Options
 
 ```
 Usage: mbarq annotate-mapped <options>

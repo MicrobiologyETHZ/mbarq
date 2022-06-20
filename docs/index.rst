@@ -11,10 +11,16 @@ Welcome to mBARq's documentation!
    This documentation is currently under construction
 
 
+Workflow
+^^^^^^^^
+
+.. image:: images/mbarq_workflow.png
+
+
 Installation
 ^^^^^^^^^^^^
 
-You will need `conda` to install and run `mBARq`.
+You will need ``conda`` to install and run ``mBARq``.
 
 .. important::
 

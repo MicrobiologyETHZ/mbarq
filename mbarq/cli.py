@@ -200,18 +200,19 @@ def merge(input_files, count_dir, name, attribute, out_dir):
     count_dataset.create_count_table()
 
 
-@main.command(cls=DefaultHelp, short_help="analyze transposons for differential abundance. Under construction",  options_metavar='<options>')
-@click.option('--count_file', '-i',  help='count file produced by "merge"', metavar='FILE')
-@click.option('--sample_data', '-s',  help='sample data', metavar='FILE')
-@click.option('--control_file', '-c', default='',  help='control barcode file', metavar='FILE')
-@click.option('--gene_name', '-g',  default='Name', help='Name of the column containing gene '
-                                                         'identifiers in the count file', metavar='STR')
-@click.option('--treatment_column',  help='column in sample data indicating treatmen', metavar='STR')
-@click.option('--batch_column', default='', help='column in sample data indicating batch', metavar='STR')
-@click.option('--baseline',  help='treatment to use as control/baseline, ex. day 0', metavar='STR')
+@main.command(cls=DefaultHelp, short_help="identify genes enriched/depleted in transposon library after treatment",
+              options_metavar='<options>')
+@click.option('--count_file', '-i',  help='CSV file produced by "mbarq merge"', metavar='FILE')
+@click.option('--sample_data', '-s',  help='CSV file containing sample data', metavar='FILE')
+@click.option('--control_file', '-c', default='',  help='control barcode file, see documentation for proper format', metavar='FILE')
+@click.option('--gene_name', '-g',  default='Name', help='column in the count file containing gene '
+                                                         'identifiers [Name]', metavar='STR')
+@click.option('--treatment_column',  help='column in sample data file indicating treatment', metavar='STR')
+@click.option('--batch_column', default='', help='column in sample data file indicating batch', metavar='STR')
+@click.option('--baseline',  help='treatment level to use as control/baseline, ex. day0', metavar='STR')
 @click.option('--name', '-n', default='', help='experiment name, '
                                                'by default will try to use count file name', metavar='STR')
-@click.option('--out_dir', '-o', default='.', help='output directory', metavar='DIR')
+@click.option('--out_dir', '-o', default='.', help='Output directory', metavar='DIR')
 def analyze(count_file, sample_data, gene_name, control_file, name,
             treatment_column, baseline, batch_column, out_dir):
     print(batch_column)
