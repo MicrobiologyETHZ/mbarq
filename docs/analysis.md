@@ -49,8 +49,8 @@
 
 ```bash 
 
-mbarq analyze -i <count_file> -s <sample_data_file> -c <control_file> --treatement_column treatement \
---batch_column batch --baseline control 
+mbarq analyze -i <count_file> -s <sample_data_file> -c <control_file> \ 
+--treatement_column treatement --batch_column batch --baseline control 
 
 ```
 

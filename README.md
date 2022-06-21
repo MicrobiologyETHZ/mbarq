@@ -1,11 +1,11 @@
 # Analysis of BarSeq Data
 
-Example usage:
+The main steps of the workflow involve:
 
-1. Mapping, quantification and analysis of random transposon mutagenesis (RB-Seq) experiments. 
-2. Quantification of custom barcoded strains 
-3. More to come! 
-
+1. Mapping of each barcode to insertion location in the genome.
+2. Profiling barcode abundances across samples.
+3. Mutant fitness analyses.
+4. Exploratory analysis using [mBARq web app](https://share.streamlit.io/asintsova/mbarq_app/main/app.py)
 
 ## Installation:
 
@@ -24,7 +24,7 @@ mbarq --help
 
 ## Quick Start
 
-### Map
+- Map each barcode to insertion location in the genome
 
 ```
 
@@ -33,7 +33,7 @@ mbarq map -f <library_R1.fastq.gz> -g <host.fasta> -a <host.gff> -l 100 \
 
 ```
 
-### Count
+- Profile barcode abundances for each sample
 
 ```
 
@@ -43,7 +43,7 @@ mbarq count  -f <sample.fastq.gz> -m <library_mapping_file.csv> \
 ```
 
 
-### Merge
+- Merge barcode counts from multiple samples into final table
 
 ```
 
@@ -51,7 +51,7 @@ mbarq merge -d <directory_with_count_files> -a locus_tag -n ExperimentName -o .
 
 ```
 
-### Analyze
+- Identify enriched/deplted genes between treatments and control
 
 ```
 
