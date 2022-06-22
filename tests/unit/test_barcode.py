@@ -50,6 +50,16 @@ def test_extract_barcode_host_dbauer():
     assert out_barcode == expected_barcode
     assert out_host == expected_host
 
+    r1 = FastA('read', "GTGTAGCGCCCTGCAGGGATGTCCACGAGGTCTCTCTTATGCTTCACAAATTGAGCGTACGCTGCAGGTCGACGGCCGGCCAGACCGGGGACTTATCAGCCAACCTGTTATCAGTGCCTGCAGAAACCGGGAGATCGGAAGAGCACACG")
+    barcode = Barcode('B20N38GACTTATCAGCCAACCTGT')
+    barcode.extract_barcode_host(r1)
+    expected_barcode = "CTTATGCTTCACAAATTGAG"
+    expected_host = "TATCAGTGCCTGCAGAAACCGGGAGATCGGAAGAGCACACG"
+
+    out_barcode, out_host = barcode.bc_seq, barcode.host
+    assert out_barcode == expected_barcode
+    assert out_host == expected_host
+
 # todo add tests for WISH barcode structure
 
 # todo add tests for mariner barcode structure
