@@ -58,33 +58,34 @@ def test__find_most_likely_positions(tn5_structure, map_test_data, tmpdir, dnaid
     seq_data = Mapper(r1, tn5_structure, genome=genome, output_dir=tmpdir)
     seq_data.temp_blastn_file = dnaid1315_expected_outcomes/"library_11_1_FKDL202598974-1a-D701-AK1682_HHG5YDSXY_L4_subsample_1.blastn"
     seq_data._find_most_likely_positions(filter_below=0)
-    expected_csv = dnaid1315_expected_outcomes/"likely_positions.csv"
+    expected_csv = dnaid1315_expected_outcomes/"23-06-22-likely_positions.csv"
+    #expected_csv = dnaid1315_expected_outcomes / "likely_positions.csv"
     tmp_csv = tmpdir.join("likely_positions.csv")
     seq_data.positions.to_csv(tmp_csv, index=False)
     assert_files_are_same(expected_csv, tmp_csv)
 
-# todo add more test for edge cases (ex. multimappers)
 
 def test_merge_colliding_bcs(tn5_structure, map_test_data, tmpdir, dnaid1315_expected_outcomes):
     r1, genome = map_test_data
     seq_data = Mapper(r1, tn5_structure, genome=genome, output_dir=tmpdir)
-    positions = pd.read_csv(dnaid1315_expected_outcomes/"likely_positions.csv")
+    positions = pd.read_csv(dnaid1315_expected_outcomes/"23-06-22-likely_positions.csv")
     seq_data.positions = positions
     seq_data._merge_colliding_barcodes()
     tmp_csv = tmpdir.join('merge_colliding_bcs.csv')
-    seq_data.positions.to_csv(tmp_csv)
-    expected_csv = dnaid1315_expected_outcomes / 'merge_colliding_bcs.csv'
+    seq_data.positions.to_csv(tmp_csv, index=False)
+    expected_csv = dnaid1315_expected_outcomes / '23-06-22-merge_colliding_bcs.csv'
     assert_files_are_same(tmp_csv, expected_csv)
+
 
 
 def test_map(tn5_structure, map_test_data, tmpdir, dnaid1315_expected_outcomes):
     r1, genome = map_test_data
-    seq_data = Mapper(r1, tn5_structure, genome=genome, output_dir=tmpdir)
+    seq_data = Mapper(r1, tn5_structure, genome=genome, output_dir=tmpdir, name="23-06-22-library_11_1")
     min_host_bases = 20
     filter_below = 0
     seq_data.map_insertions(min_host_bases, filter_below)
-    out_map = tmpdir.join('library_11_1_FKDL202598974-1a-D701-AK1682_HHG5YDSXY_L4_subsample_1.map.csv')
-    expected_map = dnaid1315_expected_outcomes/'library_11_1_FKDL202598974-1a-D701-AK1682_HHG5YDSXY_L4_subsample_1.map.csv'
+    out_map = tmpdir.join('23-06-22-library_11_1.map.csv')
+    expected_map = dnaid1315_expected_outcomes/'23-06-22-library_11_1.map.csv'
     assert_files_are_same(out_map, expected_map)
 
 

@@ -15,7 +15,8 @@ class BarcodeCounter(BarSeqData):
                  name: str = '',
                  mapping_file: str = '',
                  output_dir: str = ".",
-                 edit_distance: int = 2
+                 edit_distance: int = 2,
+                 rev_complement: bool = False,
                  ) -> None:
         super().__init__(sequencing_file)
         self.output_dir: Path = Path(output_dir)
@@ -27,6 +28,7 @@ class BarcodeCounter(BarSeqData):
         self.merged: bool = False
         self.barcode_counter: Counter = collections.Counter()
         self.edit_distance: int = edit_distance
+        self.rev_complement: bool = rev_complement
         self.annotated_cnts: pd.DataFrame = pd.DataFrame()
         # Important to keep _mbarq in the final count file name -> used to get sample IDs during merge
         self.counts_file: Path = self.output_dir / f"{self.name}_mbarq_counts.csv"
@@ -46,12 +48,19 @@ class BarcodeCounter(BarSeqData):
         else:
             self.logger.info(f'Annotation file provided: {self.map_file}')
             bc_annotations = pd.read_csv(self.map_file)
-            if 'barcode' not in bc_annotations.columns:
-                self.logger.error('No column "barcode" found in the mapping/annotation file')
-                sys.exit(1)
             if 'barcode_count' in bc_annotations.columns:
                 self.logger.error('"barcode_count" column already present in the '
                                   'mapping/annoations file. Please rename to avoid confusion')
+                sys.exit(1)
+            if self.rev_complement:
+                if 'revcomp_barcode' not in bc_annotations.columns:
+                    self.logger.error('No column "revcomp_barcode" found in the mapping/annotation file')
+                    sys.exit(1)
+                elif 'barcode' in bc_annotations.columns:
+                    bc_annotations = bc_annotations.drop(['barcode'], axis=1)
+                return bc_annotations.rename({'revcomp_barcode': 'barcode'}, axis=1)
+            if 'barcode' not in bc_annotations.columns:
+                self.logger.error('No column "barcode" found in the mapping/annotation file')
                 sys.exit(1)
             return bc_annotations
 

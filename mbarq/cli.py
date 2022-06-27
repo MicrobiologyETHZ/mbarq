@@ -94,17 +94,23 @@ def demux(input_file, demux_file, out_dir, rc, name):
               help='Feature attributes to extract from GFF file [ID,Name,locus_tag]', metavar="STR[,STR]")
 @click.option('--closest_gene',  is_flag=True,
               help='for barcodes not directly overlapping a feature, report the closest feature [False]')
+@click.option('--no_blast',  is_flag=True,
+              help='do not re-run blast [False]')
+@click.option('--rev_complement',  is_flag=True,
+              help='Add reverse complements of barcodes to the map file [False]')
 def map(forward, gff, name, transposon, out_dir, genome, filter_low_counts,
-        feat_type, attributes, closest_gene, blast_threads):
+        feat_type, attributes, closest_gene, blast_threads, no_blast, rev_complement):
     identifiers = tuple(attributes.split(','))
     mapper = Mapper(forward, transposon, genome=genome, name=name, output_dir=out_dir)
-    mapper.map_insertions(filter_below=filter_low_counts, blast_threads=blast_threads)
+    mapper.map_insertions(filter_below=filter_low_counts, blast_threads=blast_threads, no_blast=no_blast)
     if gff:
         annotated_map = AnnotatedMap(map_file=mapper.map_file, annotation_file=gff,
                                      feature_type=feat_type,
                                      identifiers=identifiers, output_dir=out_dir,
                                      name=name)
         annotated_map.annotate(intersect=not closest_gene)
+        if rev_complement:
+            annotated_map.add_rev_complement()
 
 
 #####################
@@ -124,12 +130,17 @@ def map(forward, gff, name, transposon, out_dir, genome, filter_low_counts,
               help='Feature attributes to extract from annotation file [ID,Name,locus_tag]', metavar="STR[,STR]")
 @click.option('--closest_gene', is_flag=True,
               help='for barcodes not directly overlapping a feature, report the closest feature [False]')
-def annotate_mapped(barcode_file, gff, name,  out_dir, feat_type, attributes, closest_gene):
+@click.option('--rev_complement',  is_flag=True,
+              help='Add reverse complements of barcodes to the map file [False]')
+def annotate_mapped(barcode_file, gff, name,  out_dir, feat_type, attributes, closest_gene, rev_complement):
     identifiers = tuple(attributes.split(','))
     annotatedMap = AnnotatedMap(map_file=barcode_file, annotation_file=gff,
                                 feature_type=feat_type, identifiers=identifiers,
                                 name=name, output_dir=out_dir)
     annotatedMap.annotate(intersect=not closest_gene)
+    if rev_complement:
+        annotatedMap.add_rev_complement()
+
 
 ###########
 #  COUNT  #
@@ -172,9 +183,11 @@ def annotate_mapped(barcode_file, gff, name,  out_dir, feat_type, attributes, cl
                     """, metavar='STR')
 @click.option('--edit_distance', '-e', default=2,
               help='merge barcodes with edit distances <= [INT] [2]', metavar="INT")
-def count(forward, mapping_file, out_dir, transposon, name, edit_distance):
+@click.option('--rev_complement',  is_flag=True,
+              help='Use reverse complement of barcodes for annotation [False]')
+def count(forward, mapping_file, out_dir, transposon, name, edit_distance, rev_complement):
     counter = BarcodeCounter(forward, transposon, name=name, mapping_file=mapping_file,
-                             output_dir=out_dir, edit_distance=edit_distance)
+                             output_dir=out_dir, edit_distance=edit_distance, rev_complement=rev_complement)
     counter.count_barcodes()
 
 
