@@ -374,7 +374,7 @@ class AnnotatedMap:
                                     .merge(antd_positions, how='left', on='barcode'))
         for feat in self.identifiers:
             self.annotated_positions[feat] = (self.annotated_positions[feat]
-                                              .fillna(self.annotated_positions['chr'] +
+                                              .fillna(self.annotated_positions['chr'].astype(str) +
                                                       ":" + self.annotated_positions['insertion_site'].astype(str)))
         self.logger.info(f"writing to {self.annotated_map_file}")
         self.annotated_positions.to_csv(self.annotated_map_file, index=False)
