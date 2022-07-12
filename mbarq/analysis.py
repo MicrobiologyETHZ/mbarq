@@ -341,7 +341,7 @@ class Experiment:
         fres = res[['id', 'num', 'neg|lfc', 'neg|fdr', 'pos|fdr', 'contrast']]
         fres.columns = ['Name', 'number_of_barcodes', 'LFC', 'neg_selection_fdr', 'pos_selection_fdr',
                         'contrast']
-        fres.to_csv(self.output_dir / f'{self.name}_rra_results.csv')
+        fres.to_csv(self.output_dir / f'{self.name}_rra_results.csv', index=False)
 
     def run_experiment(self):
         self.logger.info("Identifying samples")

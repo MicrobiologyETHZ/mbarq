@@ -7,10 +7,10 @@ import pickle
 from test_utils import assert_files_are_same
 
 
-def test_extract_barcodes_tn5(tn5_structure, map_test_data, dnaid1315_expected_outcomes):
+def test_extract_barcodes_tn5(tn5_structure, map_test_data, dnaid1315_expected_outcomes, tmpdir):
     """Check ...."""
     r1, genome = map_test_data
-    seq_data = Mapper(r1, tn5_structure, genome=genome)
+    seq_data = Mapper(r1, tn5_structure, genome=genome, output_dir=tmpdir)
     seq_data.extract_barcodes()
     barcodes = [(bc.bc_seq, bc.host) for bc in seq_data.barcodes]
     expected_file = dnaid1315_expected_outcomes/"extract_barcodes_tn5.pkl"

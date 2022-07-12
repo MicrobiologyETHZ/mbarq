@@ -189,7 +189,7 @@ def test_process_results(analysis_test_data_tn5, tmpdir, dnaid1315_expected_outc
     exp.write_control_barcodes_to_file()
     exp.run_all_contrasts()
     exp.process_results()
-    expected_rra = dnaid1315_expected_outcomes/"test_process_results_rra_results.csv"
+    expected_rra = dnaid1315_expected_outcomes/"test_process_results_rra_results_no_index.csv"
     actual_rra = tmpdir.join("test_process_results_rra_results.csv")
     assert_files_are_same(actual_rra, expected_rra)
 
@@ -199,7 +199,7 @@ def test_run_experiment(analysis_test_data_tn5, tmpdir, dnaid1315_expected_outco
     name = "test_run_experiment"
     exp = Experiment(count_file, sample_file, controls, name, 'Name', 'day', 'd0', 'experiment', 0.8, tmpdir)
     exp.run_experiment()
-    expected_rra = dnaid1315_expected_outcomes / "test_process_results_rra_results.csv"
+    expected_rra = dnaid1315_expected_outcomes / "test_process_results_rra_results_no_index.csv"
     actual_rra = tmpdir.join("test_run_experiment_rra_results.csv")
     assert_files_are_same(actual_rra, expected_rra)
 
@@ -210,7 +210,7 @@ def test_run_experiment_no_batch(analysis_test_data_tn5, tmpdir, dnaid1315_expec
     name = "test_run_experiment"
     exp = Experiment(count_file, sample_file, controls, name, 'Name', 'day', 'd0', '', 0.8, tmpdir)
     exp.run_experiment()
-    expected_rra = dnaid1315_expected_outcomes / "test_run_experiment_rra_results_no_batch.csv"
+    expected_rra = dnaid1315_expected_outcomes / "test_run_experiment_rra_results_no_batch_no_index.csv"
     actual_rra = tmpdir.join("test_run_experiment_rra_results.csv")
     assert_files_are_same(actual_rra, expected_rra)
 
@@ -220,6 +220,6 @@ def test_run_experiment_no_control(analysis_test_data_tn5, tmpdir, dnaid1315_exp
     name = "test_run_experiment"
     exp = Experiment(count_file, sample_file, '', name, 'Name', 'day', 'd0', 'experiment', 0.8, tmpdir)
     exp.run_experiment()
-    expected_rra = dnaid1315_expected_outcomes / "test_run_experiment_rra_results_no_control.csv"
+    expected_rra = dnaid1315_expected_outcomes / "test_run_experiment_rra_results_no_control_no_index.csv"
     actual_rra = tmpdir.join("test_run_experiment_rra_results.csv")
     assert_files_are_same(actual_rra, expected_rra)
