@@ -62,5 +62,5 @@ mbarq analyze -i <count_file> -s <sample_data_file> -c <control_file> --treateme
 
 ## Documentation and Walkthoughs:
 
-Please see [mBARq documentation]() for detailed instructions and tutorials
+Please see [mBARq documentation](https://mbarq.readthedocs.io/en/latest/) for detailed instructions and tutorials
 
