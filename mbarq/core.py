@@ -36,7 +36,6 @@ class Barcode:
         self.bc_before_tn: bool
         self.len_spacer: int
         # In theory these are optional
-        self.host: str
         self.start: Optional[int] = None  # todo don't need these, need insertion site
         self.end: Optional[int] = None
         self.chr: Optional[str] = None
@@ -101,13 +100,12 @@ class Barcode:
         -----|-17bp--|---13bp---|---------15bp--------|----?--------
          ---(-30)---(-13)-------(0)---------------------------------
         '''
-
         splits: List[str] = r1.sequence.split(self.tn_seq)  # check that tn in sequence?
         self.bc_seq = ''
         self.host = ''
         if self.bc_before_tn:
             bc_start = -(self.bc_len + self.len_spacer)
-            bc_end = -self.len_spacer
+            bc_end = None if self.len_spacer == 0 else -self.len_spacer
             bc_seq = splits[0]
             host_seq = splits[1]
         else:
@@ -129,13 +127,26 @@ class Barcode:
 
 class BarSeqData:
     def __init__(self, sequencing_file: str, annotation_file: str = '', ) -> None:
-        self.seq_file = sequencing_file
+        self.seq_file = str(sequencing_file)
         self.annotations = Path(annotation_file)
         self.barcodes: List[Barcode] = []
 
-    def validate_input(self) -> None:
+    def _validate_input(self) -> None:
         if not Path(self.seq_file).is_file():
             raise InputFileError(f'{self.seq_file} could not be found')
+
+    def stream_fastq_file(self):
+        self._validate_input()
+        if self.seq_file.endswith('fq.gz') or self.seq_file.endswith('fastq.gz'):
+            with gzip.open(self.seq_file, 'rt') as handle:
+                for record in Bio.SeqIO.parse(handle, 'fastq'):
+                    yield record
+        elif self.seq_file.endswith('fq') or self.seq_file.endswith('fastq'):
+            with open(self.seq_file) as handle:
+                for record in Bio.SeqIO.parse(handle, 'fastq'):
+                    yield record
+        else:
+            raise Exception(f'{self.seq_file} not a FASTQ file.')
 
     def stream_seq_file(self) -> Generator[FastA, None, None]:
         """
@@ -144,7 +155,7 @@ class BarSeqData:
         :param infile:
         :return: Generator[FastA, None, None]
         """
-        self.validate_input()
+        self._validate_input()
         if self.seq_file.endswith('fq.gz') or self.seq_file.endswith('fastq.gz'):
             with gzip.open(self.seq_file, 'rt') as handle:
                 for header, sequence, qual in Bio.SeqIO.QualityIO.FastqGeneralIterator(handle):

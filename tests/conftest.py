@@ -3,6 +3,8 @@ import shlex
 import pytest
 from pathlib import Path
 
+root = Path("/nfs/cds-peta/exports/biol_micro_cds_gr_sunagawa/scratch/Projects_NCCR/ref/mbarq_test_data")
+
 @pytest.fixture
 def tn5_structure():
     return 'B17N13GTGTATAAGAGACAG'
@@ -14,21 +16,22 @@ def wish_structure():
 
 @pytest.fixture
 def map_test_data():
-    seq_file = "./tests/test_files/library_13_1_1.fq.gz"
-    genome_file = "./tests/test_files/GCA_000210855.2_ASM21085v2_genomic.fna"
+    seq_file = root/"dnaid1315/test_data/library_11_1_FKDL202598974-1a-D701-AK1682_HHG5YDSXY_L4_subsample_1.fq.gz"
+    genome_file = root/"dnaid1315/ref/GCA_000210855.2_ASM21085v2_genomic.fna"
     return (seq_file, genome_file)
 
 
 @pytest.fixture
 def sl1344_gff():
-    return "./tests/test_files/GCA_000210855.2_ASM21085v2_genomic.gff"
+    return root/"dnaid1315/ref/GCA_000210855.2_ASM21085v2_genomic.gff"
 
 
 @pytest.fixture
 def count_test_data_tn5():
-    seq_file = "./tests/test_files/dnaid2023_12_test.fasta"
-    map_file = "/Users/ansintsova/git_repos/mbarq/tests/test_files/library_13_1.barcode_map.annotated.csv"
-    return (seq_file, map_file)
+    small_count_file = root/"dnaid1315/test_data/count_test.fasta.gz"
+    seq_file = root/"dnaid1315/test_data/dnaid1315_124_subsample.fasta.gz"
+    map_file = root/"dnaid1315/ref/library_11_1.annotated.csv"
+    return (small_count_file, seq_file, map_file)
 
 
 @pytest.fixture
@@ -40,9 +43,23 @@ def count_test_data_wish():
 
 @pytest.fixture
 def merge_test_data_tn5():
-    count_files = [f for f in Path("./tests/test_files/").glob("dnaid1315_*_mbarq_counts.csv")]
+    count_files = [f for f in (root/"dnaid1315/ref").glob("dnaid1315_*_mbarq_counts.csv")]
     return count_files, 'Name'
 
+@pytest.fixture
+def analysis_test_data_tn5():
+    control1col = root/"dnaid1315/ref/controls_1col.csv"
+    control2col = root / "dnaid1315/ref/controls_2col.csv"
+    control3col = root / "dnaid1315/ref/controls_3col.csv"
+    control2col_short = root / "dnaid1315/ref/controls_2col_short.csv"
+    merged_counts = root/"dnaid1315/ref/example_mbarq_merged_counts.csv"
+    sample_data = root/"dnaid1315/ref/example_sample_data.csv"
+    no_wt = root/"dnaid1315/ref/controls_3col_no_wt.csv"
+    return control1col,control2col,control3col,control2col_short,merged_counts,sample_data, no_wt
+
+@pytest.fixture
+def dnaid1315_expected_outcomes():
+    return root/"dnaid1315/expected_outcomes"
 
 def capture(command_str):
     command = shlex.split(command_str)

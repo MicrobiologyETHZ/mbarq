@@ -6,7 +6,8 @@ import sys
 import logging
 from mbarq.mapper import Mapper, AnnotatedMap
 from mbarq.counter import BarcodeCounter
-from mbarq.analysis import CountDataSet
+from mbarq.analysis import CountDataSet, Experiment
+from mbarq.demux import demux_barseq
 import sys
 
 class DefaultHelp(click.Command):
@@ -36,33 +37,16 @@ def main():
     """
 
 
-#
-# # DEMUX
-# @main.command(help='demultiplex RBSeq fastq files')
-# @click.option('--config', '-c', help='Configuration File')
-# @click.option('--input_file', '-i', help='Input FASTQ to demultiplex')
-# @click.option('--demux_file', '-d', help='Barcode Map, tab delimited, ex.\n\nACCT\tSample1\n\nAAGG\tSample2\n')
-# @click.option('--out_dir', '-o', default='.', help='Output Directory')
-# @click.option('--transposon', '-tn', default="GTGTATAAGAGACAG:17:13:before", help='Construct Structure:\n\n'
-#                                                                                   'TN sequence:BC length:length of spacer between BC and TN sequence:BC position relative to TN \n\n'
-#                                                                                   'Default: GTGTATAAGAGACAG:17:13:before')
-# @click.option('--name', '-n', default='', help="Sample Name")
-# @click.option('--rc', is_flag=True, help="Reverse complement the barcodes")
-# @click.option('--dry', is_flag=True, help="Show commands without running them")
-# @click.option('--local', is_flag=True, help="Run on local machine")
-# def demux(config, input_file, demux_file, out_dir, rc, transposon, dry, local, name):
-#     if (config or input_file) and not (config and input_file):
-#         if config:
-#             print(f'Your provided a config file: {config}')
-#             # click.echo("Running {}".format('locally' if local else ('dry' if dry else 'on cluster')))
-#             # cmd = snakemake_cmd(config, 'demux_all', dry, local)
-#             # click.echo(" ".join(cmd))
-#         else:
-#             print(f"You've provided a FASTQ file: {input_file}")
-#             demux_tnseq(input_file, demux_file, out_dir, name, transposon, rc)
-#     else:
-#         print('Provide either config or FASTQ file, not both')
-#         sys.exit(1)
+
+# DEMUX
+@main.command(help='Demultiplex fastq files')
+@click.option('--input_file', '-i', help='Input FASTQ to demultiplex')
+@click.option('--demux_file', '-d', help='Barcode Map, tab delimited, ex.\n\nSample1\tACTGACTG\n\nSample2\tGTCAGTCA\n')
+@click.option('--out_dir', '-o', default='.', help='Output Directory')
+@click.option('--name', '-n', default='', help="Sample Name")
+@click.option('--rc', is_flag=True, help="Reverse complement the barcodes")
+def demux(input_file, demux_file, out_dir, rc, name):
+    demux_barseq(input_file, demux_file, out_dir, name, rc)
 
 
 ##########
@@ -102,7 +86,7 @@ def main():
 @click.option('--out_dir', '-o', default='.', help='output directory [.]', metavar="DIR")
 @click.option('--filter_low_counts', '-l', default=0,
               help='filter out barcodes supported by [INT] or less reads [0]', metavar="INT")
-#@click.option('--blast_threads', '-t', default=4, help='Blast Threads')
+@click.option('--blast_threads', '-t', default=4, help='Blast Threads', metavar="INT")
 @click.option('--feat_type', '-ft', default='gene',
               help='feature type in the GFF file to be used for annotation, e.g. gene, exon, CDS [gene]',
               metavar="STR")
@@ -110,17 +94,23 @@ def main():
               help='Feature attributes to extract from GFF file [ID,Name,locus_tag]', metavar="STR[,STR]")
 @click.option('--closest_gene',  is_flag=True,
               help='for barcodes not directly overlapping a feature, report the closest feature [False]')
+@click.option('--no_blast',  is_flag=True,
+              help='do not re-run blast [False]')
+@click.option('--rev_complement',  is_flag=True,
+              help='Add reverse complements of barcodes to the map file [False]')
 def map(forward, gff, name, transposon, out_dir, genome, filter_low_counts,
-        feat_type, attributes, closest_gene):
+        feat_type, attributes, closest_gene, blast_threads, no_blast, rev_complement):
     identifiers = tuple(attributes.split(','))
     mapper = Mapper(forward, transposon, genome=genome, name=name, output_dir=out_dir)
-    mapper.map_insertions(filter_below=filter_low_counts)
+    mapper.map_insertions(filter_below=filter_low_counts, blast_threads=blast_threads, no_blast=no_blast)
     if gff:
         annotated_map = AnnotatedMap(map_file=mapper.map_file, annotation_file=gff,
                                      feature_type=feat_type,
                                      identifiers=identifiers, output_dir=out_dir,
                                      name=name)
         annotated_map.annotate(intersect=not closest_gene)
+        if rev_complement:
+            annotated_map.add_rev_complement()
 
 
 #####################
@@ -140,12 +130,17 @@ def map(forward, gff, name, transposon, out_dir, genome, filter_low_counts,
               help='Feature attributes to extract from annotation file [ID,Name,locus_tag]', metavar="STR[,STR]")
 @click.option('--closest_gene', is_flag=True,
               help='for barcodes not directly overlapping a feature, report the closest feature [False]')
-def annotate_mapped(barcode_file, gff, name,  out_dir, feat_type, attributes, closest_gene):
+@click.option('--rev_complement',  is_flag=True,
+              help='Add reverse complements of barcodes to the map file [False]')
+def annotate_mapped(barcode_file, gff, name,  out_dir, feat_type, attributes, closest_gene, rev_complement):
     identifiers = tuple(attributes.split(','))
     annotatedMap = AnnotatedMap(map_file=barcode_file, annotation_file=gff,
                                 feature_type=feat_type, identifiers=identifiers,
                                 name=name, output_dir=out_dir)
     annotatedMap.annotate(intersect=not closest_gene)
+    if rev_complement:
+        annotatedMap.add_rev_complement()
+
 
 ###########
 #  COUNT  #
@@ -188,9 +183,11 @@ def annotate_mapped(barcode_file, gff, name,  out_dir, feat_type, attributes, cl
                     """, metavar='STR')
 @click.option('--edit_distance', '-e', default=2,
               help='merge barcodes with edit distances <= [INT] [2]', metavar="INT")
-def count(forward, mapping_file, out_dir, transposon, name, edit_distance):
+@click.option('--rev_complement',  is_flag=True,
+              help='Use reverse complement of barcodes for annotation [False]')
+def count(forward, mapping_file, out_dir, transposon, name, edit_distance, rev_complement):
     counter = BarcodeCounter(forward, transposon, name=name, mapping_file=mapping_file,
-                             output_dir=out_dir, edit_distance=edit_distance)
+                             output_dir=out_dir, edit_distance=edit_distance, rev_complement=rev_complement)
     counter.count_barcodes()
 
 
@@ -216,10 +213,25 @@ def merge(input_files, count_dir, name, attribute, out_dir):
     count_dataset.create_count_table()
 
 
-# @main.command(short_help="analyze transposons for differential abundance. Under construction")
-# @click.option('--config', '-c', default='configs/analyze_config.yaml', help='Configuration File')
-# def analyze():
-#     pass
+@main.command(cls=DefaultHelp, short_help="identify genes enriched/depleted in transposon library after treatment",
+              options_metavar='<options>')
+@click.option('--count_file', '-i',  help='CSV file produced by "mbarq merge"', metavar='FILE')
+@click.option('--sample_data', '-s',  help='CSV file containing sample data', metavar='FILE')
+@click.option('--control_file', '-c', default='',  help='control barcode file, see documentation for proper format', metavar='FILE')
+@click.option('--gene_name', '-g',  default='Name', help='column in the count file containing gene '
+                                                         'identifiers [Name]', metavar='STR')
+@click.option('--treatment_column',  help='column in sample data file indicating treatment', metavar='STR')
+@click.option('--batch_column', default='', help='column in sample data file indicating batch', metavar='STR')
+@click.option('--baseline',  help='treatment level to use as control/baseline, ex. day0', metavar='STR')
+@click.option('--name', '-n', default='', help='experiment name, '
+                                               'by default will try to use count file name', metavar='STR')
+@click.option('--out_dir', '-o', default='.', help='Output directory', metavar='DIR')
+def analyze(count_file, sample_data, gene_name, control_file, name,
+            treatment_column, baseline, batch_column, out_dir):
+    print(batch_column)
+    exp = Experiment(count_file, sample_data, control_file, name, gene_name, treatment_column,
+                     baseline, batch_column, 0.8, out_dir)
+    exp.run_experiment()
 
 
 if __name__ == "__main__":

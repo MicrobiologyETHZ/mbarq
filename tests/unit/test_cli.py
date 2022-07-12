@@ -1,14 +1,7 @@
 import subprocess
 import shlex
 from pathlib import Path
-from tnseq2.src.sequence import stream_fa
-
-
-TESTDATA = "./tests/test_files"
-EXPDATA = "./tests/expected_outcomes"
-OUTDIR = "./tests/tmp"
-
-# todo not DRY, need to refactor
+from test_utils import assert_files_are_same
 
 
 def capture(command_str):
@@ -26,65 +19,54 @@ def to_str(bytes_or_str):
         value = bytes_or_str
     return value
 
-
-def assert_files_are_same(file1, file2, verbose=False):
-    cmd_str = f'cmp {file1} {file2}'
-    out, err, proc = capture(cmd_str)
-    if verbose:
-        print(out)
-        print(err)
-    assert proc.returncode == 0
+OUTDIR= "/nfs/cds-peta/exports/biol_micro_cds_gr_sunagawa/scratch/ansintsova/Projects_NCCR/hardt/nguyenb/tnseq/scratch/tmp"
 
 
-def get_test_inserts(files=False):
-    r1 = f'{TESTDATA}/library_13_1_1.fq'
-    r2 = f'{TESTDATA}/library_13_1_2.fq'
-    if files:
-        return r1, r2
-    inserts = zip(stream_fa(r1), stream_fa(r2))
-    return inserts
-
-
-def get_ref_data_map():
-    genome = f'{TESTDATA}/ref/Salmonella_genome_FQ312003.1_SL1344.fasta'
-    gff_file = f'{TESTDATA}/ref/Salmonella_genome+plasmids.gff'
-    return genome, gff_file
-
-
-# def get_test_data_quant():
-#     r = "/nfs/nas22/fs2202/biol_micro_sunagawa/Projects/DEV/TNSEQ_DEV/data/processed/tnseq/tnseq_pipeline/input_quantify/1315-107-library11_1-TV3371B-inoculum.fasta.gz"
-#     outMap = "/nfs/home/ansintsova/TNSEQ_DEV/code/package/tests/data/testMap.tsv"
-#     expectedQuant = "/nfs/home/ansintsova/TNSEQ_DEV/code/package/tests/data/outQuant.tsv"
-#     outQuant = "/nfs/home/ansintsova/TNSEQ_DEV/code/package/tests/data/testQuant.tsv"
-#     return r, outMap, expectedQuant, outQuant
-
-# wow this is old
-
-def test_cli_map():
-    r1, r2 = get_test_inserts(files=True)
-    genome, gff_file = get_ref_data_map()
-    cmd_str = f'mbarq map -f {r1}  -a {gff_file} ' \
-              f' -o {OUTDIR} -g {genome} -n Test2_closest -l 0 --closest_gene '
+def test_cli_analysis(analysis_test_data_tn5, tmpdir, dnaid1315_expected_outcomes):
+    _, _, _, controls, count_file, sample_file, _ = analysis_test_data_tn5
+    treat_col, batch_col, bline = 'day', 'experiment', 'd0'
+    cmd_str = f'mbarq analyze -i {count_file}  -s {sample_file} ' \
+              f'-c {controls} --treatment_column {treat_col} ' \
+              f'--batch_column {batch_col} --baseline {bline} ' \
+              f' -o {tmpdir} -g Name -n cli_analysis_test1 '
     subprocess.call(shlex.split(cmd_str))
-    # _, err, proc = capture(cmd_str)
-    # if proc.returncode != 0:
-    #     print(to_str(err))
-    # assert proc.returncode == 0
-    outMap = Path(OUTDIR)/"Test1.barcode_map.annotated.csv"
-    expectedMap = Path(EXPDATA)/"mapping/merge_colliding_bcs.annotated.csv"
-    #assert_files_are_same(outMap, expectedMap)
-
-test_cli_map()
+    actual_rra = tmpdir.join("cli_analysis_test1_rra_results.csv")
+    expected_rra = dnaid1315_expected_outcomes / "test_process_results_rra_results.csv"
+    assert_files_are_same(actual_rra, expected_rra)
 
 
-#
-# def test_cli_quantify():
-#
-#     r, outMap, expectedQuant, outQuant = get_test_data_quant()
-#     cmd_str = f'tnseq quantify -r {r}  -o {outQuant} -b {outMap} -f'
-#     _, err, proc = capture(cmd_str)
-#     assert proc.returncode == 0
-#     out, err, proc = capture(f'sort -k1 {outQuant}')
-#     with open(expectedQuant, 'r') as o:
-#        expectedLines = o.read()
-#     assert to_str(out) == expectedLines
+def test_cli_analysis_no_batch(analysis_test_data_tn5, tmpdir, dnaid1315_expected_outcomes):
+    _, _, _, controls, count_file, sample_file, _ = analysis_test_data_tn5
+    treat_col, batch_col, bline = 'day', '', 'd0'
+    cmd_str = f'mbarq analyze -i {count_file}  -s {sample_file} ' \
+              f'-c {controls} --treatment_column {treat_col} ' \
+              f'--baseline {bline} ' \
+              f' -o {tmpdir} -g Name -n cli_analysis_test2 '
+    subprocess.call(shlex.split(cmd_str))
+    actual_rra = tmpdir.join("cli_analysis_test2_rra_results.csv")
+    expected_rra = dnaid1315_expected_outcomes / "test_run_experiment_rra_results_no_batch.csv"
+    assert_files_are_same(actual_rra, expected_rra)
+
+
+def test_cli_analysis_no_control(analysis_test_data_tn5, tmpdir, dnaid1315_expected_outcomes):
+    _, _, _, controls, count_file, sample_file, _ = analysis_test_data_tn5
+    treat_col, batch_col, bline = 'day', 'experiment', 'd0'
+    cmd_str = f'mbarq analyze -i {count_file}  -s {sample_file} ' \
+              f'--treatment_column {treat_col} ' \
+              f'--batch_column {batch_col} --baseline {bline} ' \
+              f' -o {tmpdir} -g Name -n cli_analysis_test3 '
+    subprocess.call(shlex.split(cmd_str))
+    actual_rra = tmpdir.join("cli_analysis_test3_rra_results.csv")
+    expected_rra = dnaid1315_expected_outcomes / "test_run_experiment_rra_results_no_control.csv"
+    assert_files_are_same(actual_rra, expected_rra)
+
+
+
+def test_cli_analysis_log(analysis_test_data_tn5, tmpdir, dnaid1315_expected_outcomes):
+    _, _, _, controls, count_file, sample_file, _ = analysis_test_data_tn5
+    treat_col, batch_col, bline = 'day', 'experiment', 'd0'
+    cmd_str = f'mbarq analyze -i {count_file}  -s {sample_file} ' \
+              f'-c {controls} --treatment_column {treat_col} ' \
+              f'--batch_column {batch_col} --baseline {bline} ' \
+              f' -o {OUTDIR} -g Name -n cli_analysis_test1 '
+    subprocess.call(shlex.split(cmd_str))
