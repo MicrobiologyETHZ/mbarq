@@ -1,4 +1,4 @@
-name: mbarq2
+name: mbarq
 channels:
   - bioconda
   - conda-forge
