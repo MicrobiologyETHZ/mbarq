@@ -1,6 +1,8 @@
 # Identifying Salmonella colonisation determinants in mice
 
 This analysis is based on the BarSeq screen described in [Import of aspartate and malate by DcuABC drives H2/fumarate respiration to promote initial Salmonella gut-lumen colonization in mice](https://doi.org/10.1016%2Fj.chom.2020.04.013).
+In this paper, the authors generated a barcoded library of Salmonella mutants. This library was then used to infect LCM mice, and the fecal pellets from the infected mice were collected on days 1, 2,3, and 4 post infection. Each of the 
+
 
 ```{warning}
 
@@ -10,7 +12,7 @@ This walkthrough is currently under construction
 
 ## Setup
 
-1. Download and unpack [the test data](downloads/nguyenb.tar.gz). After running the command below, you should see a directory named `nguyenb_walkthrough`, which should contain all the data you need for this walkthrough. 
+1. Download and unpack [the test data](walkthrough_downloads/nguyenb.tar.gz). After running the command below, you should see a directory named `nguyenb_walkthrough`, which should contain all the data you need for this walkthrough. 
 
 ```shell
 tar -xvzf nguyenb.tar.gz
@@ -28,6 +30,9 @@ dnaid1315_18_mbarq_counts.csv
 library_11_1_mbarq_merged_counts.csv
 library_11_1_sub_1.fq.gz
 sample_data.csv
+SL1344.gff
+SL1344.fna
+
 ```
 
 2. Make sure `mbarq` is installed and you have created and activated the `mbarq` environment
@@ -61,7 +66,13 @@ mbarq map -f library_11_1_sub_1.fq.gz -g SL1344.fna -a SL1344.gff \
  
 ```
 
+The final results will be saved in nguyenb_library_map.annotated.csv
+
+
 ## Counting
+
+
+
 
 ## Merging count files
 
