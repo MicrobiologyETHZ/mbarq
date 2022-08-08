@@ -162,13 +162,13 @@ class Mapper(BarSeqData):
         # Get count out of qseqid
         best_hits['cnt'] = best_hits['qseqid'].str.split('_', expand=True)[[4]].astype(int)
         query_best_hits = best_hits.merge(df, how='left', on=['qseqid', 'bitscore'])
-        query_best_hits['end'] = query_best_hits['sstart'] + 5
+        query_best_hits['end'] = query_best_hits['sstart'].astype(int) + 5
         self.logger.info("Merge similar positions")
         query_best_hits = query_best_hits.sort_values(['barcode', 'sseqid', 'sstart'])
         query_best_hits['Group'] = ((query_best_hits.end.rolling(window=2, min_periods=1).min()
                                      - query_best_hits.sstart.rolling(window=2, min_periods=1).max()) < 0).cumsum()
         query_best_hits[
-            'Group'] = query_best_hits.barcode + "_" + query_best_hits.sseqid + "_" + query_best_hits.Group.astype(str)
+            'Group'] = query_best_hits.barcode + "_" + query_best_hits.sseqid.astype(str) + "_" + query_best_hits.Group.astype(str)
         cnt = query_best_hits.groupby(['Group']).agg({'cnt': ['sum']}).reset_index()
         cnt.columns = ['Group', 'total_count']
         loc = query_best_hits.loc[query_best_hits.groupby(['Group'])['cnt'].idxmax()]
@@ -382,13 +382,13 @@ class AnnotatedMap:
         antd_positions = pd.read_table(self.temp_bed_results_file, header=None)
         if intersect:
             antd_positions.columns = ['bc_chr', 'bc_start', 'bc_insertion_site',
-                                      'barcode', 'chr', 'souce', 'feature', 'feat_start',
+                                      'barcode', 'chr', 'source', 'feature', 'feat_start',
                                       'feat_end', 'score', 'strand',
                                       'phase', 'gene_info']
             antd_positions['distance_to_feature'] = 0
         else:
             antd_positions.columns = ['bc_chr', 'bc_start', 'bc_insertion_site',
-                                      'barcode', 'chr', 'souce', 'feature', 'feat_start',
+                                      'barcode', 'chr', 'source', 'feature', 'feat_start',
                                       'feat_end', 'score', 'strand',
                                       'phase', 'gene_info', 'distance_to_feature']
         antd_positions = antd_positions[antd_positions.feature == self.feature_type]
