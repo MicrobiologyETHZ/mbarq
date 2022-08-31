@@ -3,8 +3,8 @@ import shlex
 import pytest
 from pathlib import Path
 
-#root = Path("/nfs/cds-peta/exports/biol_micro_cds_gr_sunagawa/scratch/Projects_NCCR/ref/mbarq_test_data")
-root = Path("/Users/ansintsova/Downloads/test_mbarq/mbarq_test_data")
+root = Path("/nfs/cds-peta/exports/biol_micro_cds_gr_sunagawa/scratch/Projects_NCCR/ref/mbarq_test_data")
+#root = Path("/Users/ansintsova/Downloads/test_mbarq/mbarq_test_data")
 @pytest.fixture
 def tn5_structure():
     return 'B17N13GTGTATAAGAGACAG'

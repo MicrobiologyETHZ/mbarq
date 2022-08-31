@@ -309,30 +309,39 @@ class Experiment:
             for bc in self.cbars.wt_barcodes:
                 fo.write(f"{bc}\n")
 
-    def run_mageck(self, treated, controls, run_name):
+    def run_mageck(self, treated, controls, run_name, normalize_by='', run=True):
         """
         count file could be produced before or after batchcorrection
         """
         self.logger.info("Running MAGeCK")
         prefix = self.output_dir / run_name
-        if len(self.cbars.wt_barcodes) > 0:
-            cmd = (f"mageck test -k {self.count_file} -t {treated} "
-                   f"-c {controls}  -n {prefix} --norm-method control "
-                   f"--control-sgrna {self.mageck_bc_file}  --normcounts-to-file")
+        if normalize_by and normalize_by not in ('control', 'median', 'total'):
+            self.logger.warning('Normalization method not valid. Defaulting to "median"')
+            norm_method = 'median'
+        elif normalize_by in ['control', 'median', 'total']:
+            norm_method = normalize_by
+        elif normalize_by == 'control' and len(self.cbars.wt_barcodes) == 0:
+            self.logger.warning('No control barcodes found. Defaulting normalization mode to "median"')
+            norm_method = 'median'
+        elif len(self.cbars.wt_barcodes) > 0:
+            norm_method = 'control'
         else:
-            cmd = (f"mageck test -k {self.count_file} -t {treated} "
-                   f"-c {controls}  -n {prefix} --norm-method median "
-                   f" --normcounts-to-file")
-
+            norm_method = 'median'
+        self.logger.info(f"Normalization method: {norm_method}")
+        additional_args = f" --control-sgrna {self.mageck_bc_file} " if norm_method == 'control' else ''
+        cmd = (f"mageck test -k {self.count_file} -t {treated} "
+               f"-c {controls}  -n {prefix} --norm-method {norm_method} " + additional_args)
         self.logger.info(f"MAGeCK command: {cmd}")
-        r = subprocess.check_call(cmd.split())
+        if run:
+            r = subprocess.check_call(cmd.split())
+        return cmd
 
-    def run_all_contrasts(self):
+    def run_all_contrasts(self, normalize_by=''):
         for contrast in self.sd.contrasts:
-            self.logger.info(f"Comapring {contrast} to {self.sd.baseline}")
+            self.logger.info(f"Comparing {contrast} to {self.sd.baseline}")
             controls, treats = self.get_contrast_samples(treatment=contrast)
             run_name = f"{self.name}_{contrast}_vs_{self.sd.baseline}"
-            self.run_mageck(treats, controls, run_name)
+            self.run_mageck(treats, controls, run_name, normalize_by)
 
     def process_results(self):
         self.logger.info('Writing out final results.')
@@ -343,7 +352,7 @@ class Experiment:
                         'contrast']
         fres.to_csv(self.output_dir / f'{self.name}_rra_results.csv', index=False)
 
-    def run_experiment(self):
+    def run_experiment(self, normalize_by=''):
         self.logger.info("Identifying samples")
         self._get_good_samples()
         self.logger.info("Preparing dataset")
@@ -353,5 +362,5 @@ class Experiment:
             self.batch_correct()
         if len(self.cbars.wt_barcodes) > 0:
             self.write_control_barcodes_to_file()
-        self.run_all_contrasts()
+        self.run_all_contrasts(normalize_by=normalize_by)
         self.process_results()

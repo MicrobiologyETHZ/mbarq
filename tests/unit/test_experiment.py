@@ -156,6 +156,27 @@ def test_run_mageck(analysis_test_data_tn5, tmpdir, dnaid1315_expected_outcomes)
     actual_gene_summary = tmpdir.join(f"{run_name}.gene_summary.txt")
     assert_files_are_same(actual_gene_summary, expected_gene_summary)
 
+
+def test_run_mageck_norm_methods(analysis_test_data_tn5, tmpdir, dnaid1315_expected_outcomes):
+    _, _, _, controls, count_file, sample_file, _ = analysis_test_data_tn5
+    name = "test_run_mageck_norm_methods"
+    exp = Experiment(count_file, sample_file, controls, name, 'Name', 'day', 'd0', 'experiment', 0.8, tmpdir)
+    exp._get_good_samples()
+    exp.count_file = dnaid1315_expected_outcomes / "test_batch_correction_count.batchcorrected.txt"
+    exp.batch_file = dnaid1315_expected_outcomes / "test_prepare_mageck_dataset_batch.txt"
+    exp.write_control_barcodes_to_file()
+    treatment = 'd1'
+    controls, treats = exp.get_contrast_samples(treatment)
+    run_name = "test_run_mageck_d1_vs_d0"
+    cmd = exp.run_mageck(treats, controls, run_name, run=False)
+    assert '--norm-method control' in cmd
+    assert '--control-sgrna' in cmd
+    cmd = exp.run_mageck(treats, controls, run_name, normalize_by='median', run=False)
+    assert '--norm-method median' in cmd
+    assert '--control-sgrna' not in cmd
+    cmd = exp.run_mageck(treats, controls, run_name, normalize_by='xxx', run=False)
+    assert '--norm-method median' in cmd
+
 def test_run_all_contrasts(analysis_test_data_tn5, tmpdir, dnaid1315_expected_outcomes):
     _, _, _, controls, count_file, sample_file, _ = analysis_test_data_tn5
     name = "test_run_all_contrasts"

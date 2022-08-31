@@ -213,6 +213,10 @@ def merge(input_files, count_dir, name, attribute, out_dir):
     count_dataset.create_count_table()
 
 
+#############
+#  ANALYZE  #
+#############
+
 @main.command(cls=DefaultHelp, short_help="identify genes enriched/depleted in transposon library after treatment",
               options_metavar='<options>')
 @click.option('--count_file', '-i',  help='CSV file produced by "mbarq merge"', metavar='FILE')
@@ -226,12 +230,13 @@ def merge(input_files, count_dir, name, attribute, out_dir):
 @click.option('--name', '-n', default='', help='experiment name, '
                                                'by default will try to use count file name', metavar='STR')
 @click.option('--out_dir', '-o', default='.', help='Output directory', metavar='DIR')
+@click.option('--norm_method', default='', help='mageck normalization method, median, total or control, '
+                                                'by default will use control barcodes if provided, otherwise median', metavar='STR')
 def analyze(count_file, sample_data, gene_name, control_file, name,
-            treatment_column, baseline, batch_column, out_dir):
-    print(batch_column)
+            treatment_column, baseline, batch_column, out_dir, norm_method):
     exp = Experiment(count_file, sample_data, control_file, name, gene_name, treatment_column,
                      baseline, batch_column, 0.8, out_dir)
-    exp.run_experiment()
+    exp.run_experiment(normalize_by=norm_method)
 
 
 if __name__ == "__main__":
