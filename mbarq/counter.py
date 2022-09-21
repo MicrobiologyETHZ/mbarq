@@ -143,9 +143,9 @@ class BarcodeCounter(BarSeqData):
                    .reset_index())
         # Important to keep these column names, used for merging
         cnts_df.columns = ['barcode', 'barcode_count']
-        cnts_df = cnts_df[cnts_df['barcode_count'] > 1]
+        #cnts_df = cnts_df[cnts_df['barcode_count'] > 1]
         if cnts_df.empty:
-            self.logger.error('No barcodes with counts > 1 found')
+            self.logger.error('No barcodes with counts > 0 found')
             sys.exit(1)
         self.logger.info(f'Number of unique barcodes to annotate: {cnts_df.barcode.nunique()}')
         if self.bc_annotations.empty:
