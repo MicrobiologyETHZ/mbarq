@@ -21,7 +21,7 @@ The main steps of the workflow involve:
 3. Mutant fitness analyses.
 4. Exploratory analysis using `mBARq web app`_
 
-.. _mBARq web app: https://share.streamlit.io/asintsova/mbarq_app/main/app.py
+.. _mBARq web app: https://asintsova-mbarq-app-home-0bmqtg.streamlitapp.com
 
 
 .. include:: install.md
