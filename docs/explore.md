@@ -1,7 +1,7 @@
 # Explore
 
 
-[mBARq Web App](https://share.streamlit.io/asintsova/mbarq_app/main/app.py) allows quick and easy interactive exploration of your BarSeq experiment. 
+[mBARq Web App](https://share.streamlit.io/asintsova/mbarq_app/main/Home.py) allows quick and easy interactive exploration of your BarSeq experiment. 
 
 
 ## Visualise barcode positions across the genome
