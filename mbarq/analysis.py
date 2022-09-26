@@ -87,11 +87,15 @@ class CountDataSet:
             self.logger.error('Validation failed. Invalid count dataset.')
             sys.exit(1)
 
-    def create_count_table(self):
+    def create_count_table(self, annotated_only=False):
         if type(self.count_files) == list:
             self.count_table, self.sampleIDs = self._validate_count_table(self._merge_count_files())
             self.logger.info(f'Writing merged count dataset')
-            self.count_table.to_csv(self.output_dir / f"{self.name}_mbarq_merged_counts.csv", index=False)
+            if annotated_only:
+                to_file = self.count_table[~self.count_table.iloc[:, 1].isna()]
+                to_file.to_csv(self.output_dir / f"{self.name}_mbarq_merged_counts.annotated.csv", index=False)
+            else:
+                self.count_table.to_csv(self.output_dir / f"{self.name}_mbarq_merged_counts.csv", index=False)
         else:
             self.logger.info(f'Reading count data from {self.count_files}')
             self.count_table, self.sampleIDs = self._validate_count_table(pd.read_table(self.count_files, sep=self.sep))
@@ -208,6 +212,7 @@ class Experiment:
         self.sd = SampleData(sample_data_file, name, treatment_column, baseline,
                              batch_column, output_dir=output_dir, logger=self.logger)
         self._initiate_experiment()
+        self.annotation_cols = list(self.cds.count_table.columns[0:2])
         self.wt_bc_conc_counts = pd.DataFrame()
         self.control_bc_counts = pd.DataFrame()
         self.good_samples = []
@@ -215,6 +220,7 @@ class Experiment:
         self.cutoff = cutoff
         self.batch_file = self.output_dir / f"{self.name}_batch.txt"
         self.count_file = self.output_dir / f"{self.name}_count.txt"
+        self.experiment_counts = pd.DataFrame()
         self.mageck_bc_file = self.output_dir / f"{self.name}_wt_barcodes.txt"
         self.sampleID_col = self.sd.sampleData.columns[0]
 
@@ -268,7 +274,6 @@ class Experiment:
         Assume first column of cds.count_table has barcodes and second has geneName
         The rest of cds.count_table are raw counts for samples in sampleIDs.
         """
-        annotation_cols = list(self.cds.count_table.columns[0:2])
         sample_cols_to_keep = [self.sampleID_col, self.sd.treatment_name]
         if self.sd.batch_name:
             sample_cols_to_keep += [self.sd.batch_name]
@@ -276,10 +281,10 @@ class Experiment:
             self.sd.sampleData[self.sd.sampleData[self.sampleID_col].isin(self.good_samples)][sample_cols_to_keep]
             .sort_values([self.sd.treatment_name]))
         batch_df.to_csv(self.batch_file, index=False, sep='\t')
-        magDf = self.cds.count_table[annotation_cols + self.good_samples].copy()
-        magDf.loc[magDf[annotation_cols[0]].isin(self.cbars.wt_barcodes), annotation_cols[1]] = 'control'
-        magDf = magDf.dropna(subset=annotation_cols).fillna(0)
-        magDf.to_csv(self.count_file, index=False, sep='\t')
+        magDf = self.cds.count_table[self.annotation_cols + self.good_samples].copy()
+        magDf.loc[magDf[self.annotation_cols[0]].isin(self.cbars.wt_barcodes), self.annotation_cols[1]] = 'control'
+        self.experiment_counts = magDf.dropna(subset=self.annotation_cols).fillna(0)
+        self.experiment_counts.to_csv(self.count_file, index=False, sep='\t') # todo get rid of this
 
     def batch_correct(self, r_path=Path(__file__).parent.resolve() / "batchCorrect.R"):
         """
@@ -296,13 +301,17 @@ class Experiment:
             self.logger.error(f"Batch Correction exited with return code {return_code}")
             sys.exit(1)
         self.count_file = self.output_dir / f"{self.name}_count.batchcorrected.txt"
+        self.experiment_counts = pd.read_table(self.count_file)
         self.logger.info(f"Batch correction complete.")
 
-    def get_contrast_samples(self, treatment='d1'):
+    def get_contrast_samples(self, treatment='d1', filter_low_counts=False):
         sDf = self.sd.sampleData[self.sd.sampleData[self.sampleID_col].isin(self.good_samples)]
-        controls = ",".join(sDf[sDf[self.sd.treatment_name] == self.sd.baseline][self.sampleID_col].unique())
-        treats = ",".join(sDf[sDf[self.sd.treatment_name] == treatment][self.sampleID_col].unique())
-        return controls, treats
+        controls = list(sDf[sDf[self.sd.treatment_name] == self.sd.baseline][self.sampleID_col].unique())
+        treats = list(sDf[sDf[self.sd.treatment_name] == treatment][self.sampleID_col].unique())
+        contrast_table = self.experiment_counts[self.annotation_cols + controls + treats]
+        if filter_low_counts:
+            contrast_table = contrast_table[contrast_table[controls+treats].sum(axis=1) > max(10, len(controls+treats))]
+        return ",".join(controls), ",".join(treats), contrast_table
 
     def write_control_barcodes_to_file(self):
         with open(self.mageck_bc_file, "w") as fo:
@@ -315,6 +324,7 @@ class Experiment:
         """
         self.logger.info("Running MAGeCK")
         prefix = self.output_dir / run_name
+        contrast_file = self.output_dir / f"{run_name}.txt"
         if normalize_by and normalize_by not in ('control', 'median', 'total'):
             self.logger.warning('Normalization method not valid. Defaulting to "median"')
             norm_method = 'median'
@@ -329,19 +339,23 @@ class Experiment:
             norm_method = 'median'
         self.logger.info(f"Normalization method: {norm_method}")
         additional_args = f" --control-sgrna {self.mageck_bc_file} " if norm_method == 'control' else ''
-        cmd = (f"mageck test -k {self.count_file} -t {treated} "
+        cmd = (f"mageck test -k {contrast_file} -t {treated} "
                f"-c {controls}  -n {prefix} --norm-method {norm_method} " + additional_args)
         self.logger.info(f"MAGeCK command: {cmd}")
         if run:
             r = subprocess.check_call(cmd.split())
         return cmd
 
-    def run_all_contrasts(self, normalize_by=''):
+    def run_all_contrasts(self, normalize_by='', filter_low_counts=False):
         for contrast in self.sd.contrasts:
             self.logger.info(f"Comparing {contrast} to {self.sd.baseline}")
-            controls, treats = self.get_contrast_samples(treatment=contrast)
+            controls, treats, contrast_table = self.get_contrast_samples(treatment=contrast,
+                                                                         filter_low_counts=filter_low_counts)
             run_name = f"{self.name}_{contrast}_vs_{self.sd.baseline}"
+            contrast_file = self.output_dir/f"{run_name}.txt" # todo pass this on as an argument
+            contrast_table.to_csv(contrast_file, index=False, sep='\t')
             self.run_mageck(treats, controls, run_name, normalize_by)
+            os.remove(contrast_file)
 
     def process_results(self):
         self.logger.info('Writing out final results.')
@@ -352,7 +366,7 @@ class Experiment:
                         'contrast']
         fres.to_csv(self.output_dir / f'{self.name}_rra_results.csv', index=False)
 
-    def run_experiment(self, normalize_by=''):
+    def run_experiment(self, normalize_by='', filter_low_counts=False):
         self.logger.info("Identifying samples")
         self._get_good_samples()
         self.logger.info("Preparing dataset")
@@ -362,5 +376,5 @@ class Experiment:
             self.batch_correct()
         if len(self.cbars.wt_barcodes) > 0:
             self.write_control_barcodes_to_file()
-        self.run_all_contrasts(normalize_by=normalize_by)
+        self.run_all_contrasts(normalize_by=normalize_by, filter_low_counts=filter_low_counts)
         self.process_results()

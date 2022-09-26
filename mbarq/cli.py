@@ -201,7 +201,8 @@ def count(forward, mapping_file, out_dir, transposon, name, edit_distance, rev_c
 @click.option('--name', '-n',  help='output file prefix', metavar='STR')
 @click.option('--attribute', '-a',  default='',
               help='Feature attribute to keep in the merged file (ex. ID, Name, locus_tag)', metavar="STR")
-def merge(input_files, count_dir, name, attribute, out_dir):
+@click.option('--annotated_only',  is_flag=True, help='Only report barcodes with valid annotation [False]')
+def merge(input_files, count_dir, name, attribute, out_dir, annotated_only):
     if not input_files and not count_dir:
         sys.exit('Please specify files to merge or a directory with count files')
     elif input_files:
@@ -210,7 +211,7 @@ def merge(input_files, count_dir, name, attribute, out_dir):
         input_files = [f for f in Path(count_dir).iterdir() if 'mbarq_counts' in f.name]
     count_dataset = CountDataSet(count_files=input_files, name=name,
                                  gene_column_name=attribute, output_dir=out_dir)
-    count_dataset.create_count_table()
+    count_dataset.create_count_table(annotated_only=annotated_only)
 
 
 #############
@@ -232,11 +233,14 @@ def merge(input_files, count_dir, name, attribute, out_dir):
 @click.option('--out_dir', '-o', default='.', help='Output directory', metavar='DIR')
 @click.option('--norm_method', default='', help='mageck normalization method, median, total or control, '
                                                 'by default will use control barcodes if provided, otherwise median', metavar='STR')
+@click.option('--filter_low_counts', is_flag=True, help='filter out barcodes with < 10 reads across all conditions, '
+                                                'if more than 10 samples, < number of samples')
+
 def analyze(count_file, sample_data, gene_name, control_file, name,
-            treatment_column, baseline, batch_column, out_dir, norm_method):
+            treatment_column, baseline, batch_column, out_dir, norm_method, filter_low_counts):
     exp = Experiment(count_file, sample_data, control_file, name, gene_name, treatment_column,
                      baseline, batch_column, 0.8, out_dir)
-    exp.run_experiment(normalize_by=norm_method)
+    exp.run_experiment(normalize_by=norm_method, filter_low_counts=filter_low_counts)
 
 
 if __name__ == "__main__":
