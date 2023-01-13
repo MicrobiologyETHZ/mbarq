@@ -1,6 +1,4 @@
-import logging
 import collections
-import os
 from typing import Optional, List, Union, Tuple
 from mbarq.core import Barcode, BarSeqData
 from pathlib import Path
@@ -10,8 +8,15 @@ from mbarq.mbarq_logger import get_logger
 import subprocess
 from Bio.Seq import Seq
 
+
 class Mapper(BarSeqData):
 
+    """
+
+    Class to contain and process sequencing data from a mapping BarSeq experiment
+
+
+    """
     def __init__(self, sequencing_file: str, barcode_structure: str, name: str = '',
                  genome: str = '', db: str = '',
                  output_dir: str = ".",
@@ -34,14 +39,29 @@ class Mapper(BarSeqData):
         self.logger.info("Initializing Barcode Mapper")
 
     def _validate_input(self) -> None:
+        """
+        - Check that either genome fasta or blast-db are provided
+        - Check that sequencing file exists
+
+        """
         if not self.blastdb and not self.genome:
             self.logger.error("Blast DB or genome file are needed for mapping")
             sys.exit(1)
         elif not Path(self.seq_file).is_file():
             self.logger.error(f'{self.seq_file} could not be found')
             sys.exit(1)
+        elif self.genome and self.genome.endswith('.gz'):
+            self.logger.error(f'Currently cannot accept genome file in compressed format, '
+                              f'please provide uncompressed FASTA')
 
     def extract_barcodes(self, min_host_bases: int = 20) -> None:
+        """
+
+         :param min_host_bases:  minimal length of host sequence to consider
+
+        - Adapted from original written by Hans
+
+        """
         self.logger.info('------------------')
         self.logger.info("Extracting Barcodes")
         total_inserts: int = 0
@@ -85,6 +105,11 @@ class Mapper(BarSeqData):
                          f'{int(100 * ((inserts_without_tp2 * 100.0) / total_inserts)) / 100.0}%')
 
     def _dereplicate_barcodes(self):
+        """
+
+        - Original written by Hans
+
+        """
         self.logger.info('------------------')
         self.logger.info("Dereplicating barcodes")
         barcode_2_sequences = collections.defaultdict(list)
@@ -109,9 +134,10 @@ class Mapper(BarSeqData):
 
     def _blast_barcode_host(self, blast_threads: int = 4) -> None:
         """
-         Map reads against the  blast database (creates database from reference genome
-          if doesn't already exist)
+         Map reads against the  blast database
+         Creates database from reference genome if it doesn't already exist)
          :return: None
+         - Original written by Hans
 
          """
         db_return_code = 0
@@ -141,9 +167,7 @@ class Mapper(BarSeqData):
     def _find_most_likely_positions(self, filter_below, perc_primary_location=0.75) -> None:
         """
          Takes in blast file, and provides most likely locations for each barcode
-         :param: blast_file
          :param: filter_below
-         :param: logger
          :return: pd.DataFrame
          """
 
@@ -157,6 +181,7 @@ class Mapper(BarSeqData):
         barcode = Barcode(self.barcode_structure)
         insertion_col = 'sstart' if barcode.bc_before_tn else 'send'
         df = df.rename({insertion_col: 'insertion_site'}, axis=1)
+
         # Get a best hit for each qseqID: group by qseqid, find max bitscore
         best_hits = df.groupby('qseqid').agg({'bitscore': ['max']}).reset_index()
         best_hits.columns = ['qseqid', 'bitscore']
@@ -164,6 +189,7 @@ class Mapper(BarSeqData):
         best_hits['barcode'] = best_hits['qseqid'].str.split('_', expand=True)[[2]]
         # Get count out of qseqid
         best_hits['cnt'] = best_hits['qseqid'].str.split('_', expand=True)[[4]].astype(int)
+        # Only keep barcodes with max bitscores
         query_best_hits = best_hits.merge(df, how='left', on=['qseqid', 'bitscore'])
         query_best_hits['end'] = query_best_hits['insertion_site'].astype(int) + 5
         self.logger.info("Merge similar positions")
@@ -171,8 +197,7 @@ class Mapper(BarSeqData):
         query_best_hits['Group'] = ((query_best_hits.end.rolling(window=2, min_periods=1).min()
                                      - query_best_hits['insertion_site'].rolling(window=2,
                                                                                  min_periods=1).max()) < 0).cumsum()
-        query_best_hits[
-            'Group'] = query_best_hits.barcode + "_" + query_best_hits.sseqid.astype(
+        query_best_hits['Group'] = query_best_hits.barcode + "_" + query_best_hits.sseqid.astype(
             str) + "_" + query_best_hits.Group.astype(str)
         cnt = query_best_hits.groupby(['Group']).agg({'cnt': ['sum']}).reset_index()
         cnt.columns = ['Group', 'total_count']
@@ -195,7 +220,9 @@ class Mapper(BarSeqData):
     def _merge_colliding_barcodes(self) -> None:
 
         """
+
         Takes data frame of positions, and merges colliding barcodes
+
         """
         self.logger.info('------------------')
         self.logger.info(f'Merging barcodes with edit distance of less than {self.edit_distance} mapped to '
@@ -269,7 +296,21 @@ class Mapper(BarSeqData):
         self.logger.info(f"Final number of barcodes found: {self.positions.barcode.nunique()}")
         self.logger.info(f"Mean number of reads per barcode: {self.positions.total_count.mean()}")
 
-    def map_insertions(self, min_host_bases=20, filter_below=100, blast_threads=4, no_blast=False):
+    def map_insertions(self, min_host_bases: int = 20, filter_below: int = 100, blast_threads: int =4,
+                       no_blast: bool = False):
+
+        """
+        :param min_host_bases: Minimal length of host sequence to consider
+        :param filter_below: Read count threshold for keeping barcodes
+        :param no_blast: Whether to run the blast command or not
+        0. If no_blast == True, look for existing blast output file.
+        1. Else Extract barcodes from the sequencing file using `extract_barcodes`, write barcode to fasta, blast each host sequence agains the genome
+        2. Find most likely positions
+        3. Merge colliding barcodes
+        4. Write out final positions to csv
+
+        """
+
         if no_blast:
             if not self.temp_blastn_file.is_file():
                 self.logger.error("--no_blast option specified, but no BLAST output file found")
