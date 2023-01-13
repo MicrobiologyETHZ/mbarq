@@ -226,7 +226,7 @@ def merge(input_files, count_dir, name, attribute, out_dir, annotated_only):
 @click.option('--gene_name', '-g',  default='Name', help='column in the count file containing gene '
                                                          'identifiers [Name]', metavar='STR')
 @click.option('--treatment_column',  help='column in sample data file indicating treatment', metavar='STR')
-@click.option('--batch_column', default='', help='column in sample data file indicating batch', metavar='STR')
+#@click.option('--batch_column', default='', help='column in sample data file indicating batch', metavar='STR')
 @click.option('--baseline',  help='treatment level to use as control/baseline, ex. day0', metavar='STR')
 @click.option('--name', '-n', default='', help='experiment name, '
                                                'by default will try to use count file name', metavar='STR')
@@ -237,7 +237,8 @@ def merge(input_files, count_dir, name, attribute, out_dir, annotated_only):
                                                 'if more than 10 samples, < number of samples')
 
 def analyze(count_file, sample_data, gene_name, control_file, name,
-            treatment_column, baseline, batch_column, out_dir, norm_method, filter_low_counts):
+            treatment_column, baseline, out_dir, norm_method, filter_low_counts):
+    batch_column = ''
     exp = Experiment(count_file, sample_data, control_file, name, gene_name, treatment_column,
                      baseline, batch_column, 0.8, out_dir)
     exp.run_experiment(normalize_by=norm_method, filter_low_counts=filter_low_counts)

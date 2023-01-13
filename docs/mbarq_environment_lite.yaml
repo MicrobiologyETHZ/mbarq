@@ -20,6 +20,7 @@ dependencies:
   - click
   - pip
   - pandera
+  - pyranges==0.0.117
   - pretty_errors # optional and could be removed
   - pip
   - pip:

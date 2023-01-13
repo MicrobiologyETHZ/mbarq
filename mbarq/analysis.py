@@ -12,7 +12,7 @@ from mbarq.mbarq_logger import get_logger
 from pandera import Column, DataFrameSchema, Check, Index
 import subprocess
 import shlex
-
+import os
 
 class CountDataSet:
     """
@@ -108,6 +108,10 @@ class CountDataSet:
 
 
 class SampleData:
+    """
+    Process, validate and store relevant info from the metadata file
+
+    """
     def __init__(self, sample_data_csv: Union[Path, str], name, treatment_name,
                  baseline: str, batch_name: str = '', output_dir='.', logger=""):
         self.sample_data_csv = sample_data_csv
@@ -152,8 +156,9 @@ class ControlBarcodes:
             [barcode],[conc]*,[phenotype]*
             * second and third columns are optional
             1. Check that the first column contains barcodes
-            2. Check that second column is numeric -> should contain concentrations
-            3. If there is a thrid column it should be string, and at least one should be ['wt', 'WT', 'wildtype']
+            2. Check that there are at least 4 barcodes
+            3. Check that second column is numeric -> should contain concentrations
+            4. If there is a third column it should be string, and at least one should be ['wt', 'WT', 'wildtype', 'wild-type']
 
             """
 
@@ -172,10 +177,10 @@ class ControlBarcodes:
             cntrl_df = pd.read_csv(self.barcode_csv, header=None)
             num_cols = cntrl_df.shape[1]
             col_names = ['barcode', 'concentration', 'genotype']
-            schema_dict = {"barcode": Column(str),
+            schema_dict = {"barcode": Column(str, [Check(lambda s: s.nunique() >= 4)]),
                            "concentration": Column(float),
                            "genotype": Column(str, [
-                               Check(lambda s: any(s.isin(['wt', 'WT', 'wildtype']))),
+                               Check(lambda s: any(s.isin(['wt', 'WT', 'wildtype', 'wild-type']))),
                            ])}
             cntrl_df.columns = col_names[0:num_cols]
             control_schema = DataFrameSchema({c: schema_dict[c] for c in list(cntrl_df.columns)},
@@ -192,7 +197,7 @@ class ControlBarcodes:
                     self.wt_bc_conc = cntrl_df.copy()
                 self.wt_barcodes = self.wt_bc_conc.barcode.values
             except pandera.errors.SchemaError:
-                self.logger.error('Validation failed: invalid control barcodes file format.')
+                self.logger.error('Control file validation failed: invalid control file format or insufficient number of control barcodes (must be at least 4).')
                 sys.exit(1)
         else:
             self.logger.info("No information on control barcodes provided.")
@@ -200,11 +205,11 @@ class ControlBarcodes:
 
 class Experiment:
     def __init__(self, count_file, sample_data_file, control_file, name,
-                 gene_column, treatment_column, baseline, batch_column,
+                 gene_column, treatment_column, baseline, batch_column='',
                  cutoff=0.8, output_dir='.'):
         self.output_dir = Path(output_dir)
         self.name = name if name else Path(count_file).stem
-        self.sampleIDs = []  # don't need this and self.good_samples refactor
+        self.sampleIDs = []
         self.logger = get_logger('experiment-log', self.output_dir / f"{self.name}_Experiment.log")
         self.cds = CountDataSet(count_file, name=name, gene_column_name=gene_column,
                                 output_dir=output_dir, logger=self.logger)
@@ -215,7 +220,6 @@ class Experiment:
         self.annotation_cols = list(self.cds.count_table.columns[0:2])
         self.wt_bc_conc_counts = pd.DataFrame()
         self.control_bc_counts = pd.DataFrame()
-        self.good_samples = []
         self.corr_df = pd.DataFrame()
         self.cutoff = cutoff
         self.batch_file = self.output_dir / f"{self.name}_batch.txt"
@@ -225,6 +229,11 @@ class Experiment:
         self.sampleID_col = self.sd.sampleData.columns[0]
 
     def _initiate_experiment(self):
+        """
+        Load count and sample and control barcode data
+
+
+        """
         self.logger.info('Initiating Experiment.')
         self.logger.info("Loading count data.")
         self.cds.create_count_table()
@@ -233,7 +242,7 @@ class Experiment:
         self.cbars.read_control_file()
         self.logger.info("Loading sample data.")
         self.sd.read_sample_data_csv()
-        self.sampleIDs = set(self.cds.sampleIDs).intersection(set(self.sd.sampleIDs))
+        self.sampleIDs = list(set(self.cds.sampleIDs).intersection(set(self.sd.sampleIDs)))
         self.logger.info(f"Loaded data on {len(self.sampleIDs)} samples.")
         if len(self.sampleIDs) == 0:
             self.logger.error('No matching sampleIDs between sample file and count file found')
@@ -243,7 +252,7 @@ class Experiment:
 
         """
         If there is information about wt bc and concentrations,
-        calculate correlation between counts and concentrations,
+        calculate correlation between counts (log of cpms) and  log of concentrations,
         only keep samples with R2 > self.cutoff
 
         Else all samples are assumed to be good samples
@@ -254,19 +263,19 @@ class Experiment:
         if not self.cbars.wt_bc_conc.empty:
             self.logger.info(f"Calculating correlations between control concentrations and control counts (CPMs)")
             self.logger.info(f"Filtering out samples with R2 < {self.cutoff}")
-            self.wt_bc_conc_counts = (self.cbars.wt_bc_conc.merge(self.cds.cpms,
-                                                                  how='left', on='barcode')
-                                      .fillna(-1))  # cpms are in log, min val is log2(0.5)
+            # Merge counts with control barcodes, if any barcodes are missing from counts assume count is 0
+            # Since forcing there to be at least 4 barcodes, will always be based at least on 4 points
+            self.wt_bc_conc_counts = (self.cbars.wt_bc_conc.merge(self.cds.cpms, how='left', on='barcode')
+                                      .fillna(-1))  # cpms are in log2, so zero values -> log2(0 +0.5) = -1
             concentrations = np.log2(self.wt_bc_conc_counts.concentration)
             samples = self.wt_bc_conc_counts[self.cds.sampleIDs]
             self.corr_df = pd.DataFrame(samples.corrwith(concentrations), columns=['R'])
             self.corr_df["R2"] = self.corr_df.R ** 2
-            self.good_samples = [s for s in list(self.corr_df[self.corr_df.R2 > self.cutoff].index) if
-                                 s in self.sampleIDs]
+            self.sampleIDs = [s for s in self.sampleIDs if s in list(self.corr_df[self.corr_df.R2 > self.cutoff].index)]
+            self.corr_df.to_csv(self.output_dir/f"{self.name}.correlations.csv")
         else:
             self.logger.info('No information on control barcode concentration provided. Keeping all samples')
-            self.good_samples = list(self.sampleIDs)
-        self.logger.info(f'Proceeding with analysis of {len(self.good_samples)} samples')
+        self.logger.info(f'Proceeding with analysis of {len(self.sampleIDs)} samples')
 
     def prepare_mageck_dataset(self):
         """
@@ -275,42 +284,42 @@ class Experiment:
         The rest of cds.count_table are raw counts for samples in sampleIDs.
         """
         sample_cols_to_keep = [self.sampleID_col, self.sd.treatment_name]
-        if self.sd.batch_name:
-            sample_cols_to_keep += [self.sd.batch_name]
-        batch_df = (
-            self.sd.sampleData[self.sd.sampleData[self.sampleID_col].isin(self.good_samples)][sample_cols_to_keep]
-            .sort_values([self.sd.treatment_name]))
-        batch_df.to_csv(self.batch_file, index=False, sep='\t')
-        magDf = self.cds.count_table[self.annotation_cols + self.good_samples].copy()
+        # if self.sd.batch_name:
+        #     sample_cols_to_keep += [self.sd.batch_name]
+        self.sd.sampleData = (self.sd.sampleData[self.sd.sampleData[self.sampleID_col].isin(self.sampleIDs)][sample_cols_to_keep]
+                             .sort_values([self.sd.treatment_name]))
+        self.sd.sampleData.to_csv(self.batch_file, index=False, sep='\t')
+        magDf = self.cds.count_table[self.annotation_cols + self.sampleIDs].copy()
         magDf.loc[magDf[self.annotation_cols[0]].isin(self.cbars.wt_barcodes), self.annotation_cols[1]] = 'control'
         self.experiment_counts = magDf.dropna(subset=self.annotation_cols).fillna(0)
-        self.experiment_counts.to_csv(self.count_file, index=False, sep='\t') # todo get rid of this
+        #self.experiment_counts.to_csv(self.count_file, index=False, sep='\t') # todo get rid of this
 
-    def batch_correct(self, r_path=Path(__file__).parent.resolve() / "batchCorrect.R"):
-        """
-        Given count df only with good samples
-        sample data df (read in and validated somewhere else) with information about batches etc.
-        batch column name
+    # def batch_correct(self, r_path=Path(__file__).parent.resolve() / "batchCorrect.R"):
+    #     """
+    #     Given count df only with good samples
+    #     sample data df (read in and validated somewhere else) with information about batches etc.
+    #     batch column name
+    #
+    #     """
+    #     self.logger.info('Running batch correction')
+    #     cmd = f'Rscript {r_path} {self.count_file} {self.batch_file} {self.name} {self.output_dir}'
+    #     self.logger.info(f"R command: {cmd}")
+    #     return_code = subprocess.check_call(shlex.split(cmd))
+    #     if return_code != 0:
+    #         self.logger.error(f"Batch Correction exited with return code {return_code}")
+    #         sys.exit(1)
+    #     self.count_file = self.output_dir / f"{self.name}_count.batchcorrected.txt"
+    #     self.experiment_counts = pd.read_table(self.count_file)
+    #     self.logger.info(f"Batch correction complete.")
 
-        """
-        self.logger.info('Running batch correction')
-        cmd = f'Rscript {r_path} {self.count_file} {self.batch_file} {self.name} {self.output_dir}'
-        self.logger.info(f"R command: {cmd}")
-        return_code = subprocess.check_call(shlex.split(cmd))
-        if return_code != 0:
-            self.logger.error(f"Batch Correction exited with return code {return_code}")
-            sys.exit(1)
-        self.count_file = self.output_dir / f"{self.name}_count.batchcorrected.txt"
-        self.experiment_counts = pd.read_table(self.count_file)
-        self.logger.info(f"Batch correction complete.")
-
-    def get_contrast_samples(self, treatment='d1', filter_low_counts=False):
-        sDf = self.sd.sampleData[self.sd.sampleData[self.sampleID_col].isin(self.good_samples)]
-        controls = list(sDf[sDf[self.sd.treatment_name] == self.sd.baseline][self.sampleID_col].unique())
-        treats = list(sDf[sDf[self.sd.treatment_name] == treatment][self.sampleID_col].unique())
+    def get_contrast_samples(self, treatment='d1', filter_low_counts=False, filter_below=10):
+        controls = list(self.sd.sampleData[self.sd.sampleData[self.sd.treatment_name] == self.sd.baseline][self.sampleID_col].unique())
+        treats = list(self.sd.sampleData[self.sd.sampleData[self.sd.treatment_name] == treatment][self.sampleID_col].unique())
         contrast_table = self.experiment_counts[self.annotation_cols + controls + treats]
         if filter_low_counts:
-            contrast_table = contrast_table[contrast_table[controls+treats].sum(axis=1) > max(10, len(controls+treats))]
+            filter_below = max(filter_below, len(controls+treats))
+            self.logger.info(f"Filtering counts < {filter_below}")
+            contrast_table = contrast_table[contrast_table[controls+treats].sum(axis=1) > max(filter_below, len(controls+treats))]
         return ",".join(controls), ",".join(treats), contrast_table
 
     def write_control_barcodes_to_file(self):
@@ -318,13 +327,14 @@ class Experiment:
             for bc in self.cbars.wt_barcodes:
                 fo.write(f"{bc}\n")
 
-    def run_mageck(self, treated, controls, run_name, normalize_by='', run=True):
+    def run_mageck(self, treated, controls, contrast_table, run_name, normalize_by='', run=True):
         """
         count file could be produced before or after batchcorrection
         """
         self.logger.info("Running MAGeCK")
         prefix = self.output_dir / run_name
         contrast_file = self.output_dir / f"{run_name}.txt"
+        contrast_table.to_csv(contrast_file, index=False, sep='\t')
         if normalize_by and normalize_by not in ('control', 'median', 'total'):
             self.logger.warning('Normalization method not valid. Defaulting to "median"')
             norm_method = 'median'
@@ -344,23 +354,32 @@ class Experiment:
         self.logger.info(f"MAGeCK command: {cmd}")
         if run:
             r = subprocess.check_call(cmd.split())
+            if r == 0:
+                os.remove(contrast_file)
         return cmd
 
     def run_all_contrasts(self, normalize_by='', filter_low_counts=False):
+        contrasts_run = []
         for contrast in self.sd.contrasts:
             self.logger.info(f"Comparing {contrast} to {self.sd.baseline}")
             controls, treats, contrast_table = self.get_contrast_samples(treatment=contrast,
                                                                          filter_low_counts=filter_low_counts)
-            run_name = f"{self.name}_{contrast}_vs_{self.sd.baseline}"
-            contrast_file = self.output_dir/f"{run_name}.txt" # todo pass this on as an argument
-            contrast_table.to_csv(contrast_file, index=False, sep='\t')
-            self.run_mageck(treats, controls, run_name, normalize_by)
-            os.remove(contrast_file)
+            if controls and treats:
+                run_name = f"{self.name}_{contrast}_vs_{self.sd.baseline}"
+                self.run_mageck(treats, controls, contrast_table, run_name, normalize_by)
+                contrasts_run.append(contrast)
+            else:
+                self.logger.warning(f"No sufficient samples found for {contrast}")
+        return contrasts_run
 
-    def process_results(self):
+    def process_results(self, contrasts_run=()):
         self.logger.info('Writing out final results.')
-        res = pd.concat([pd.read_table(self.output_dir / f"{self.name}_{i}_vs_{self.sd.baseline}.gene_summary.txt")
-                        .assign(contrast=i) for i in self.sd.contrasts])
+        if not contrasts_run:
+            res = pd.concat([pd.read_table(self.output_dir / f"{self.name}_{i}_vs_{self.sd.baseline}.gene_summary.txt")
+                            .assign(contrast=i) for i in self.sd.contrasts])
+        else:
+            res = pd.concat([pd.read_table(self.output_dir / f"{self.name}_{i}_vs_{self.sd.baseline}.gene_summary.txt")
+                            .assign(contrast=i) for i in contrasts_run])
         fres = res[['id', 'num', 'neg|lfc', 'neg|fdr', 'pos|fdr', 'contrast']]
         fres.columns = ['Name', 'number_of_barcodes', 'LFC', 'neg_selection_fdr', 'pos_selection_fdr',
                         'contrast']
@@ -371,10 +390,10 @@ class Experiment:
         self._get_good_samples()
         self.logger.info("Preparing dataset")
         self.prepare_mageck_dataset()
-        if self.sd.batch_name:
-            self.logger.info(f"Batch column: {self.sd.batch_name}")
-            self.batch_correct()
+        # if self.sd.batch_name:
+        #     self.logger.info(f"Batch column: {self.sd.batch_name}")
+        #     self.batch_correct()
         if len(self.cbars.wt_barcodes) > 0:
             self.write_control_barcodes_to_file()
-        self.run_all_contrasts(normalize_by=normalize_by, filter_low_counts=filter_low_counts)
-        self.process_results()
+        contrasts_run = self.run_all_contrasts(normalize_by=normalize_by, filter_low_counts=filter_low_counts)
+        self.process_results(contrasts_run)

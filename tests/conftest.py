@@ -55,7 +55,8 @@ def analysis_test_data_tn5():
     merged_counts = root/"dnaid1315/ref/example_mbarq_merged_counts.csv"
     sample_data = root/"dnaid1315/ref/example_sample_data.csv"
     no_wt = root/"dnaid1315/ref/controls_3col_no_wt.csv"
-    return control1col,control2col,control3col,control2col_short,merged_counts,sample_data, no_wt
+    control3bc = root/"dnaid1315/ref/controls_3bc.csv"
+    return control1col,control2col,control3col,control2col_short,merged_counts,sample_data, no_wt, control3bc
 
 @pytest.fixture
 def dnaid1315_expected_outcomes():
