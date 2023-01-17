@@ -185,10 +185,15 @@ def annotate_mapped(barcode_file, gff, name,  out_dir, feat_type, attributes, cl
               help='merge barcodes with edit distances <= [INT] [2]', metavar="INT")
 @click.option('--rev_complement',  is_flag=True,
               help='Use reverse complement of barcodes for annotation [False]')
-def count(forward, mapping_file, out_dir, transposon, name, edit_distance, rev_complement):
+@click.option('--filter_low_counts',  default=1,
+              help='Filter out barcodes supported by <= [INT] reads [1]')
+@click.option('--annotated_only', is_flag=True,
+              help='Only report barcodes found in annotation file [False]')
+def count(forward, mapping_file, out_dir, transposon, name, edit_distance, rev_complement,
+          filter_low_counts, annotated_only):
     counter = BarcodeCounter(forward, transposon, name=name, mapping_file=mapping_file,
                              output_dir=out_dir, edit_distance=edit_distance, rev_complement=rev_complement)
-    counter.count_barcodes()
+    counter.count_barcodes(filter_low_counts, annotated_only)
 
 
 ###########

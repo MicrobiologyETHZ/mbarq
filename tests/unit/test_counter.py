@@ -74,23 +74,24 @@ def test_annotate_barcodes(tn5_structure, count_test_data_tn5, tmpdir, dnaid1315
     seq_data = BarcodeCounter(r1, tn5_structure, mapping_file=mfile, output_dir=tmpdir)
     seq_data._extract_barcodes()
     seq_data._merge_similar()
-    seq_data._annotate_barcodes()
+    seq_data._annotate_barcodes(filter_low=True)
     expected_counts = dnaid1315_expected_outcomes/"test_annotate_barcodes_dnaid1315_124.csv"
     out_counts = tmpdir.join("test_annotate_barcodes_dnaid1315_124.csv")
     seq_data.annotated_cnts.to_csv(out_counts)
     assert_files_are_same(expected_counts, out_counts)
 
+# todo same without filtering low counts
 
 def test_count_barcodes(tn5_structure, count_test_data_tn5, dnaid1315_expected_outcomes, tmpdir):
     # todo use new mapping file
     _, r1, mfile = count_test_data_tn5
     seq_data = BarcodeCounter(r1, tn5_structure, mapping_file=mfile, output_dir= tmpdir)
-    seq_data.count_barcodes()
+    seq_data.count_barcodes(filter_low=True)
     expected_counts = dnaid1315_expected_outcomes/"dnaid1315_124_subsample_mbarq_counts.csv"
     actual_counts = tmpdir.join("dnaid1315_124_subsample_mbarq_counts.csv")
     assert_files_are_same(expected_counts, actual_counts)
 
-#
+
 # def test_count_barcodes_wish(wish_structure, count_test_data_wish, tmpdir):
 #     fq, mfile = count_test_data_wish
 #     seq_data = BarcodeCounter(fq, wish_structure, mapping_file=mfile, output_dir=tmpdir)

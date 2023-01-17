@@ -131,7 +131,7 @@ class BarcodeCounter(BarSeqData):
             self.merged = True
         self.barcode_counter = collections.Counter({barcode.bc_seq: barcode.count for barcode in self.barcodes})
 
-    def _annotate_barcodes(self) -> None:
+    def _annotate_barcodes(self, filter_low=False, annotated_only=False) -> None:
         """
         If annotation is available, annotate the counted barcodes
         :return: None
@@ -143,7 +143,8 @@ class BarcodeCounter(BarSeqData):
                    .reset_index())
         # Important to keep these column names, used for merging
         cnts_df.columns = ['barcode', 'barcode_count']
-        #cnts_df = cnts_df[cnts_df['barcode_count'] > 1]
+        if filter_low:
+            cnts_df = cnts_df[cnts_df['barcode_count'] > int(filter_low)]
         if cnts_df.empty:
             self.logger.error('No barcodes with counts > 0 found')
             sys.exit(1)
@@ -155,7 +156,8 @@ class BarcodeCounter(BarSeqData):
             self.logger.info(f'Annotating barcodes')
             self.logger.info(f'Columns found in the mapping/annotations file: '
                              f'{", ".join(self.bc_annotations.columns)}')
-            self.annotated_cnts = cnts_df.merge(self.bc_annotations, how='left', on='barcode').drop_duplicates()
+            merge_strategy = 'inner' if annotated_only else 'left'
+            self.annotated_cnts = cnts_df.merge(self.bc_annotations, how=merge_strategy, on='barcode').drop_duplicates()
             filter_col = self.bc_annotations.columns[1]
             with_ids = self.annotated_cnts[self.annotated_cnts[filter_col].notnull()]
             self.logger.info(f'Number of annotated barcodes: {with_ids.shape[0]}')
@@ -165,7 +167,7 @@ class BarcodeCounter(BarSeqData):
     def _write_counts_file(self) -> None:
         self.annotated_cnts.to_csv(self.counts_file, index=False)
 
-    def count_barcodes(self):
+    def count_barcodes(self, filter_low=False, annotated_only=False):
         self.logger.info('------------------')
         self.logger.info("Step 1: Counting ")
         self.logger.info('------------------')
@@ -177,7 +179,7 @@ class BarcodeCounter(BarSeqData):
         self.logger.info('------------------')
         self.logger.info("Step 3: Annotating")
         self.logger.info('------------------')
-        self._annotate_barcodes()
+        self._annotate_barcodes(filter_low, annotated_only)
         self.logger.info("Finished!")
         self.logger.info(f'Writting final counts to {self.counts_file}')
         self._write_counts_file()
