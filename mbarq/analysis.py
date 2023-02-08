@@ -272,7 +272,8 @@ class Experiment:
             self.corr_df = pd.DataFrame(samples.corrwith(concentrations), columns=['R'])
             self.corr_df["R2"] = self.corr_df.R ** 2
             self.sampleIDs = [s for s in self.sampleIDs if s in list(self.corr_df[self.corr_df.R2 > self.cutoff].index)]
-            self.corr_df.to_csv(self.output_dir/f"{self.name}.correlations.csv")
+            self.corr_df.to_csv(self.output_dir/f"{self.name}_correlations.csv")
+            self.wt_bc_conc_counts.to_csv(self.output_dir/f"{self.name}_control_counts.csv")
         else:
             self.logger.info('No information on control barcode concentration provided. Keeping all samples')
         self.logger.info(f'Proceeding with analysis of {len(self.sampleIDs)} samples')
@@ -375,15 +376,18 @@ class Experiment:
     def process_results(self, contrasts_run=()):
         self.logger.info('Writing out final results.')
         if not contrasts_run:
-            res = pd.concat([pd.read_table(self.output_dir / f"{self.name}_{i}_vs_{self.sd.baseline}.gene_summary.txt")
-                            .assign(contrast=i) for i in self.sd.contrasts])
-        else:
-            res = pd.concat([pd.read_table(self.output_dir / f"{self.name}_{i}_vs_{self.sd.baseline}.gene_summary.txt")
-                            .assign(contrast=i) for i in contrasts_run])
+            contrasts_run = self.sd.contrasts
+
+        res = pd.concat([pd.read_table(self.output_dir / f"{self.name}_{i}_vs_{self.sd.baseline}.gene_summary.txt")
+                        .assign(contrast=i) for i in contrasts_run])
+        bc_res = pd.concat([pd.read_table(self.output_dir / f"{self.name}_{i}_vs_{self.sd.baseline}.sgrna_summary.txt")
+                        .assign(contrast=i) for i in contrasts_run]).rename({'sgrna': 'barcode', 'Gene': 'Name'}, axis=1)
         fres = res[['id', 'num', 'neg|lfc', 'neg|fdr', 'pos|fdr', 'contrast']]
         fres.columns = ['Name', 'number_of_barcodes', 'LFC', 'neg_selection_fdr', 'pos_selection_fdr',
                         'contrast']
         fres.to_csv(self.output_dir / f'{self.name}_rra_results.csv', index=False)
+        bc_res.to_csv(self.output_dir / f'{self.name}_barcodes_results.csv', index=False)
+
 
     def run_experiment(self, normalize_by='', filter_low_counts=False):
         self.logger.info("Identifying samples")
