@@ -95,7 +95,8 @@ class CountDataSet:
                 to_file = self.count_table[~self.count_table.iloc[:, 1].isna()]
                 to_file.to_csv(self.output_dir / f"{self.name}_mbarq_merged_counts.annotated.csv", index=False)
             else:
-                self.count_table.to_csv(self.output_dir / f"{self.name}_mbarq_merged_counts.csv", index=False)
+                sort_by = self.count_table.columns[1]
+                self.count_table.sort_values(sort_by).to_csv(self.output_dir / f"{self.name}_mbarq_merged_counts.csv", index=False)
         else:
             self.logger.info(f'Reading count data from {self.count_files}')
             self.count_table, self.sampleIDs = self._validate_count_table(pd.read_table(self.count_files, sep=self.sep))
