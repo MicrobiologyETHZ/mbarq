@@ -1,15 +1,10 @@
-name: mbarq_lite
+name: mbarq
 channels:
   - bioconda
   - conda-forge
   - defaults
 dependencies:
   - mageck
-  #- bioconductor-mageckflute
-  #- r-base=4.1.3
-  #- bioconductor-sva
-  #- bioconductor-do.db=2.9=r41*
-  #- bioconductor-go.db=3.14.0=r41*
   - python==3.8.*
   - blast==2.9.*
   - bedtools==2.30.*
@@ -21,7 +16,7 @@ dependencies:
   - pip
   - pandera
   - pyranges==0.0.117
-  - pretty_errors # optional and could be removed
+  - pybedtools == 0.9.0
   - pip
   - pip:
       - "--editable=git+https://github.com/MicrobiologyETHZ/mbarq#egg=mbarq"

@@ -15,11 +15,11 @@ You will need ``conda`` to install and run ``mBARq``.
 ## Option 1
 
 
-- Download [this environment file](mbarq_environment_complete.yaml) and run
+- Download [this environment file](mbarq_environment_install.yaml) and run
 
 ```shell
 
-   mamba env create -f mbarq_environment_complete.yaml
+   mamba env create -f mbarq_environment_install.yaml
    conda activate mbarq
    mbarq --help
 ```
