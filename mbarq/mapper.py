@@ -339,13 +339,13 @@ class AnnotatedMap:
                  output_dir: str = ".",
                  positions: pd.DataFrame = pd.DataFrame()
                  ) -> None:
+        self.map_file: Union[str, Path] = map_file
         if name:
             self.name: str = name
         else:
             self.name = Path(self.map_file).stem
         self.output_dir: Path = Path(output_dir)
         self.logger = get_logger('annotate_map-log', self.output_dir / f"{self.name}_annotate_map.log")
-        self.map_file: Union[str, Path] = map_file
         self.annotations: str = annotation_file
         self.feature_type: str = feature_type
         self.identifiers: List[str, ...] = list(identifiers)
