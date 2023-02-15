@@ -349,9 +349,6 @@ class AnnotatedMap:
         self.annotations: str = annotation_file
         self.feature_type: str = feature_type
         self.identifiers: List[str, ...] = list(identifiers)
-        if len(self.identifiers) > 2:
-            self.logger.warning('Too many identifiers provided. Using the first 2')
-            self.identifiers = self.identifiers[:2]
         self.annotated_map_file: Path = self.output_dir / f'{self.name}.annotated.csv'
         self.positions: pd.DataFrame = positions if not positions.empty else pd.read_csv(self.map_file)
         self.temp_bed_file: Path = self.output_dir / f"{self.name}.bed"
