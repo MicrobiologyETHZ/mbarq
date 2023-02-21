@@ -212,7 +212,8 @@ class Experiment:
         self.name = name if name else Path(count_file).stem
         self.sampleIDs = []
         self.logger = get_logger('experiment-log', self.output_dir / f"{self.name}_Experiment.log")
-        self.cds = CountDataSet(count_file, name=name, gene_column_name=gene_column,
+        self.gene_column = gene_column
+        self.cds = CountDataSet(count_file, name=name, gene_column_name=self.gene_column,
                                 output_dir=output_dir, logger=self.logger)
         self.cbars = ControlBarcodes(control_file, output_dir=output_dir, logger=self.logger)
         self.sd = SampleData(sample_data_file, name, treatment_column, baseline,
@@ -384,7 +385,7 @@ class Experiment:
         bc_res = pd.concat([pd.read_table(self.output_dir / f"{self.name}_{i}_vs_{self.sd.baseline}.sgrna_summary.txt")
                         .assign(contrast=i) for i in contrasts_run]).rename({'sgrna': 'barcode', 'Gene': 'Name'}, axis=1)
         fres = res[['id', 'num', 'neg|lfc', 'neg|fdr', 'pos|fdr', 'contrast']]
-        fres.columns = ['Name', 'number_of_barcodes', 'LFC', 'neg_selection_fdr', 'pos_selection_fdr',
+        fres.columns = [self.gene_column, 'number_of_barcodes', 'LFC', 'neg_selection_fdr', 'pos_selection_fdr',
                         'contrast']
         fres.to_csv(self.output_dir / f'{self.name}_rra_results.csv', index=False)
         bc_res.to_csv(self.output_dir / f'{self.name}_barcodes_results.csv', index=False)
