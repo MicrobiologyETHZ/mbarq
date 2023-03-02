@@ -269,8 +269,9 @@ class Experiment:
             # Since forcing there to be at least 4 barcodes, will always be based at least on 4 points
             self.wt_bc_conc_counts = (self.cbars.wt_bc_conc.merge(self.cds.cpms, how='left', on='barcode')
                                       .fillna(-1))  # cpms are in log2, so zero values -> log2(0 +0.5) = -1
+            good_samples = [s for s in self.cds.sampleIDs if (self.wt_bc_conc_counts[s] == -1).sum() / self.wt_bc_conc_counts.shape[0] <= 0.2]
+            samples = self.wt_bc_conc_counts[good_samples]
             concentrations = np.log2(self.wt_bc_conc_counts.concentration)
-            samples = self.wt_bc_conc_counts[self.cds.sampleIDs]
             self.corr_df = pd.DataFrame(samples.corrwith(concentrations), columns=['R'])
             self.corr_df["R2"] = self.corr_df.R ** 2
             self.sampleIDs = [s for s in self.sampleIDs if s in list(self.corr_df[self.corr_df.R2 > self.cutoff].index)]
@@ -315,14 +316,14 @@ class Experiment:
     #     self.experiment_counts = pd.read_table(self.count_file)
     #     self.logger.info(f"Batch correction complete.")
 
-    def get_contrast_samples(self, treatment='d1', filter_low_counts=False, filter_below=10):
+    def get_contrast_samples(self, treatment='d1', filter_low_counts=0):
         controls = list(self.sd.sampleData[self.sd.sampleData[self.sd.treatment_name] == self.sd.baseline][self.sampleID_col].unique())
         treats = list(self.sd.sampleData[self.sd.sampleData[self.sd.treatment_name] == treatment][self.sampleID_col].unique())
         contrast_table = self.experiment_counts[self.annotation_cols + controls + treats]
         if filter_low_counts:
-            filter_below = max(filter_below, len(controls+treats))
-            self.logger.info(f"Filtering counts < {filter_below}")
-            contrast_table = contrast_table[contrast_table[controls+treats].sum(axis=1) > max(filter_below, len(controls+treats))]
+            filter_low_counts = max(filter_low_counts, len(controls+treats))
+            self.logger.info(f"Filtering counts < {filter_low_counts}")
+            contrast_table = contrast_table[contrast_table[controls+treats].sum(axis=1) > filter_low_counts]
         return ",".join(controls), ",".join(treats), contrast_table
 
     def write_control_barcodes_to_file(self):
@@ -361,7 +362,7 @@ class Experiment:
                 os.remove(contrast_file)
         return cmd
 
-    def run_all_contrasts(self, normalize_by='', filter_low_counts=False):
+    def run_all_contrasts(self, normalize_by='', filter_low_counts=0):
         contrasts_run = []
         for contrast in self.sd.contrasts:
             self.logger.info(f"Comparing {contrast} to {self.sd.baseline}")
@@ -391,7 +392,7 @@ class Experiment:
         bc_res.to_csv(self.output_dir / f'{self.name}_barcodes_results.csv', index=False)
 
 
-    def run_experiment(self, normalize_by='', filter_low_counts=False):
+    def run_experiment(self, normalize_by='', filter_low_counts=0):
         self.logger.info("Identifying samples")
         self._get_good_samples()
         self.logger.info("Preparing dataset")

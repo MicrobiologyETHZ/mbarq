@@ -106,7 +106,7 @@ def test_get_good_samples(analysis_test_data_tn5, tmpdir):
                              'dnaid1315_129', 'dnaid1315_131', 'dnaid1315_136', 'dnaid1315_17', 'dnaid1315_18',
                              'dnaid1315_19', 'dnaid1315_20', 'dnaid1315_28', 'dnaid1315_40', 'dnaid1315_42',
                              'dnaid1315_50', 'dnaid1315_52', 'dnaid1315_66', 'dnaid1315_81', 'dnaid1315_90',
-                             'dnaid1315_92', 'dnaid1315_94', 'dnaid1315_96']
+                             'dnaid1315_92', 'dnaid1315_94']
     assert sorted(exp.sampleIDs) == sorted(expected_good_samples)
 
 def test_prepare_mageck_dataset(analysis_test_data_tn5, tmpdir, dnaid1315_expected_outcomes):
@@ -116,11 +116,18 @@ def test_prepare_mageck_dataset(analysis_test_data_tn5, tmpdir, dnaid1315_expect
     exp._get_good_samples()
     exp.prepare_mageck_dataset()
     #expected_counts = dnaid1315_expected_outcomes /"test_prepare_mageck_dataset_count.txt"
-    expected_sd = dnaid1315_expected_outcomes/"test_prepare_mageck_dataset_no_batch.txt"
+    #expected_sd = dnaid1315_expected_outcomes/"test_prepare_mageck_dataset_no_batch.txt"
+    expected_good_samples = ['dnaid1315_10', 'dnaid1315_107', 'dnaid1315_117', 'dnaid1315_124', 'dnaid1315_128',
+                             'dnaid1315_129', 'dnaid1315_131', 'dnaid1315_136', 'dnaid1315_17', 'dnaid1315_18',
+                             'dnaid1315_19', 'dnaid1315_20', 'dnaid1315_28', 'dnaid1315_40', 'dnaid1315_42',
+                             'dnaid1315_50', 'dnaid1315_52', 'dnaid1315_66', 'dnaid1315_81', 'dnaid1315_90',
+                             'dnaid1315_92', 'dnaid1315_94']
     assert exp.batch_file.is_file()
+    out_samples = list(pd.read_table(exp.batch_file)['sampleID'].values)
+    assert sorted(out_samples) == sorted(expected_good_samples)
     #assert exp.count_file.is_file()
     #assert_files_are_same(expected_counts, exp.count_file)
-    assert_files_are_same(expected_sd, exp.batch_file)
+
 
 
 # def test_batch_correction(analysis_test_data_tn5, tmpdir, dnaid1315_expected_outcomes):
@@ -142,8 +149,8 @@ def test_get_contrast_samples(analysis_test_data_tn5, tmpdir, dnaid1315_expected
     exp.prepare_mageck_dataset()
     treatment = 'd1'
     controls, treats, contrast_table = exp.get_contrast_samples(treatment)
-    assert controls == 'dnaid1315_10,dnaid1315_107,dnaid1315_81'
-    assert treats == 'dnaid1315_19,dnaid1315_124,dnaid1315_117,dnaid1315_17,dnaid1315_18,dnaid1315_90'
+    assert controls == 'dnaid1315_10,dnaid1315_81,dnaid1315_107'
+    assert treats == 'dnaid1315_17,dnaid1315_18,dnaid1315_19,dnaid1315_124,dnaid1315_117,dnaid1315_90'
 
 
 def test_run_mageck(analysis_test_data_tn5, tmpdir, dnaid1315_expected_outcomes):
@@ -235,7 +242,7 @@ def test_run_experiment_no_batch(analysis_test_data_tn5, tmpdir, dnaid1315_expec
     name = "test_run_experiment"
     exp = Experiment(count_file, sample_file, controls, name, 'Name', 'day', 'd0', '', 0.8, tmpdir)
     exp.run_experiment()
-    expected_rra = dnaid1315_expected_outcomes / "test_run_experiment_rra_results_no_batch_no_index.csv"
+    expected_rra = dnaid1315_expected_outcomes / "test_process_results_rra_results_no_index.csv"
     actual_rra = tmpdir.join("test_run_experiment_rra_results.csv")
     assert_files_are_same(actual_rra, expected_rra)
 

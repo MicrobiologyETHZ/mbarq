@@ -238,8 +238,8 @@ def merge(input_files, count_dir, name, attribute, out_dir, annotated_only):
 @click.option('--out_dir', '-o', default='.', help='Output directory', metavar='DIR')
 @click.option('--norm_method', default='', help='mageck normalization method, median, total or control, '
                                                 'by default will use control barcodes if provided, otherwise median', metavar='STR')
-@click.option('--filter_low_counts', is_flag=True, help='filter out barcodes with < 10 reads across all conditions, '
-                                                'if more than 10 samples, < number of samples')
+@click.option('--filter_low_counts', default=0, help='filter out barcodes with < N reads across all conditions, '
+                                                'if more than N samples, < number of samples', metavar='INT')
 
 def analyze(count_file, sample_data, gene_name, control_file, name,
             treatment_column, baseline, out_dir, norm_method, filter_low_counts):
