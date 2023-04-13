@@ -184,6 +184,20 @@ def test_annotate_closest(map_test_data, tn5_structure, sl1344_gff, tmpdir,dnaid
     assert all([v == to_test[k] for k, v in expected.items()])
 
 
+def test_annotate_closest_numeric_chr():
+        root = Path("/nfs/cds-peta/exports/biol_micro_cds_gr_sunagawa/scratch/Projects_NCCR/ref/mbarq_test_data/dnaid1315/expected_outcomes")
+        map_file = root/"numeric_chr_map.csv"
+        gff_file = root/'ST69.gff'
+        feature_type = 'CDS'
+        identifiers = ('ID', 'locus_tag')
+        am = AnnotatedMap(map_file=map_file, annotation_file=gff_file,
+                          name='library_11_1',
+                          feature_type=feature_type, identifiers=identifiers, output_dir=".")
+        am._validate_annotations()
+        am._find_annotation_overlaps(intersect=False)
+        assert am.annotated_positions['ID'].isna().sum() == 0
+        assert am.annotated_positions['locus_tag'].isna().sum() == 0
+
 
 # # def test_annotate_intersect_no_gff(tmpdir):
 # #     # todo convert this into a test

@@ -352,7 +352,7 @@ class AnnotatedMap:
         self.annotated_map_file: Path = self.output_dir / f'{self.name}.annotated.csv'
         self.positions: pd.DataFrame = positions if not positions.empty else pd.read_csv(self.map_file)
         self.temp_bed_file: Path = self.output_dir / f"{self.name}.bed"
-        self.temp_bed_results_file: Path = self.output_dir / f"{self.name}.bed.intersect.tab"
+        self.temp_bed_results_file: Path = self.output_dir / f"{self.name}.bed.intersect.tab" #todo don't think I need these
         self.temp_bed_closest_file: Path = self.output_dir / f"{self.name}.bed.closest.tab"
 
     def _find_annotation_overlaps(self, intersect=True):
@@ -373,6 +373,7 @@ class AnnotatedMap:
         bed_map = bed_map[barcode_cols]
         barcodes_bedtool = BedTool.from_dataframe(bed_map).sort()
         gff = pr.read_gff3(self.annotations).as_df()
+        gff['Chromosome'] = gff['Chromosome'].astype(str)
         gff['Start'] = gff['Start'] + 1
         gff_cols = ['Chromosome', 'Source', 'Feature', 'Start', 'End', 'Score', 'Strand', 'Frame']
         gff_short = gff[gff.Feature == self.feature_type][gff_cols]
@@ -382,6 +383,7 @@ class AnnotatedMap:
         if intersect == True:
             barcode_annotation = barcode_annotation[barcode_annotation['distance_to_feature'] == 0]
         # calculate percentile
+        barcode_annotation['Chromosome'] = barcode_annotation['Chromosome'].astype(str)
         barcode_annotation = barcode_annotation.merge(gff[gff_cols + self.identifiers], on=gff_cols,
                                                       how='left')
         barcode_annotation['percentile'] = np.where(barcode_annotation.Strand.isin(['+', 'plus']),
