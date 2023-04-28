@@ -14,7 +14,7 @@
 
 - Annotation file in GFF3 format (this will allow mapping insertion sites to genomic features). 
 - Filtering parameter (``-l``, in our hands, filtering barcodes supported by less than 100 reads produced reliable library annotations. This of course is dependent on depth of the sequencing, and should be tested for each use case).
-- Report closest gene (``-c``). If ``gff`` files is provided, by default, ``mbarq`` will only report features overlaping the insertion site. In addition, ``mbarq`` can report the location and distance of the closest downstream feature for barcodes that do not directly overlap any features. 
+- Report closest gene (``-c``). If ``gff`` file is provided, by default, ``mbarq`` will only report features overlapping the insertion site. In addition, ``mbarq`` can report the location and distance of the closest downstream feature for barcodes that do not directly overlap any features. 
 
 **Output files**
 
