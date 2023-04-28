@@ -85,10 +85,10 @@ Options:
 
 **Required Inputs**
 
-- **EITHER** a comma-separated list of count files to be merged **OR** a path to the directory containing all the count file to be merged.
+- **EITHER** a comma-separated list of count files to be merged **OR** a path to the directory containing all the count files to be merged.
 - Prefix for the output file.
 
-**Sugested Inputs**
+**Suggested Inputs**
 - If you would like to keep one of the annotation (attribute) columns from the mapping file, it can be specified with `-a` option. 
 
 **Output file**
