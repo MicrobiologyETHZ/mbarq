@@ -72,7 +72,7 @@ class CountDataSet:
         sample_cols = df_to_validate.columns[2:] if self.gene_name else df_to_validate.columns[1:]
         barcode_val = {df_to_validate.columns[0]: Column(str)}
         gene_val = {df_to_validate.columns[1]: Column(str, nullable=True)} if self.gene_name else {}
-        sample_val = {sample_col: Column(float) for sample_col in sample_cols}
+        sample_val = {sample_col: Column(float, coerce=True) for sample_col in sample_cols}
         validation_dict = {**barcode_val, **gene_val, **sample_val}
         schema = DataFrameSchema(
             validation_dict,
@@ -83,8 +83,9 @@ class CountDataSet:
             schema.validate(df_to_validate)
             self.logger.info("Validation complete.")
             return df_to_validate, sample_cols
-        except pandera.errors.SchemaError:
+        except pandera.errors.SchemaError as e:
             self.logger.error('Validation failed. Invalid count dataset.')
+            self.logger.error(e)
             sys.exit(1)
 
     def create_count_table(self, annotated_only=False):
