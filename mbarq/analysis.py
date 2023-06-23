@@ -40,6 +40,7 @@ class CountDataSet:
         sampleIDs = []
         index_cols = []
         for count_file in self.count_files:
+            self.logger.info(f"Processing {count_file}")
             sampleID = Path(count_file).stem.split("_mbarq")[0]
             df = pd.read_table(Path(count_file), sep=self.sep)
             if not self.gene_name:
@@ -58,6 +59,7 @@ class CountDataSet:
         if len(df_list) == 0 | len(index_cols) == 0:
             self.logger.error(f'Could not process any of the files. Check that {self.gene_name} is correct')
             sys.exit(1)
+        self.logger.info(f"Completed processing count files. Merging.")
         fdf = pd.concat(df_list)
         fdf = (fdf.pivot(index=index_cols, columns='sampleID', values=fdf.columns[1])
                .fillna(0)

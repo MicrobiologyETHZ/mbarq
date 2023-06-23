@@ -2,8 +2,9 @@ import subprocess
 import shlex
 import pytest
 from pathlib import Path
+from mbarq.core import Barcode
 
-root = Path("/nfs/cds-peta/exports/biol_micro_cds_gr_sunagawa/scratch/Projects_NCCR/ref/mbarq_test_data")
+root = Path("tests/mbarq_test_data")
 #root = Path("/Users/ansintsova/Downloads/test_mbarq/mbarq_test_data")
 @pytest.fixture
 def tn5_structure():
@@ -16,14 +17,28 @@ def wish_structure():
 
 @pytest.fixture
 def map_test_data():
-    seq_file = root/"dnaid1315/test_data/library_11_1_FKDL202598974-1a-D701-AK1682_HHG5YDSXY_L4_subsample_1.fq.gz"
-    genome_file = root/"dnaid1315/ref/GCA_000210855.2_ASM21085v2_genomic.fna"
-    return (seq_file, genome_file)
+    seq_file = root/"mapping/mapping_reads.fastq.gz"
+    genome_file = root/"mapping/test_genome.fna"
+    barcodes = [Barcode('B17N13GTGTATAAGAGACAG', sequence, host) for sequence, host in [('ATGAAAAGTATGAATCC',
+                                                                                        'GAATAGACATTTTAACACTCCGAAATCATTATAAATGAATAATTAACACAAGGAGTGTAAGCGCCCTGTCAGGAGGGTAAAAATCAAAGCACATCATTTAAAACC'),
+                                                                                       ('ATGAAAAGTATGAATCC',
+                                                                                        'GAATAGACATTTTAACACTCCGAAATCATTATAAATGAATAATTAACACAAGGAGTGTAAGCGCCCTGTCAGGAGGGTAAAAATCAAAGCACATCATTTAAAACC'),
+                                                                                       ('ATGAAAAGTATGAATCC',
+                                                                                        'GAATAGACATTTTAACACTCCGAAATCATTATAAATGAATAATTAACACAAGGAGTGTAAGCGCCCTAGATCGGAAGAGCACACGTCTGAACTCCAGTCACATTA'),
+                                                                                       ('TTGGGATCCCACCATTT',
+                                                                                        'GAGTAAGCGGGCGCTGAGAGGTGTTGTTTTCTCTTCGTTAGACGGTGTTGTTAACCTCATTTTTATGATTTTTATATCATCTAAAAAGATGATGTTTTGTGATTA'),
+                                                                                       ('CGTCAGGGCAGCGAACA',
+                                                                                        'AACTCAGTCTAACGCCAAGGGTCTGCTGGGCGCGCTGCGTGATATGCAGGCAAAAGCGAAAGCCGCAGGTCACACGCTGGCGCTCTCCATGAGTATCGGCGGCTG'),
+                                                                                       ('CGTCAGGGCAGCGAACA',
+                                                                                        'AACTCAGTCTAACGCCAAGGGTCTGCTGGGCGCGCTGCGTGATATGCAGATCGGAAGAGCACACGTCTGAACTCCAGTCACATTACTCGATCTCGTATGCCGTCT'),
+                                                                                       ]]
+    mapping_dir = root/'mapping'
+    return seq_file, genome_file, barcodes, mapping_dir
 
 
 @pytest.fixture
-def sl1344_gff():
-    return root/"dnaid1315/ref/GCA_000210855.2_ASM21085v2_genomic.gff"
+def test_gff():
+    return root/"mapping/map_annotate.gff"
 
 
 @pytest.fixture
