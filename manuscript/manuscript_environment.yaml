@@ -11,5 +11,5 @@ dependencies:
   - seaborn
   - plotly
   - pyaml
-  - sklearn
+  - scikit-learn
   - jupyter
