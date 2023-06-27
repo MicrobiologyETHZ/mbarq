@@ -1,0 +1,27 @@
+root: manuscript_data
+figures_dir: figures
+
+
+nguyen:
+    map_file: library_11_1_l50.annotated.csv
+    counts_file: nguyen_2020_l50_mbarq_merged_counts.csv
+    results_file: nguyen_2020_l50_mbarq_merged_counts_rra_results.csv
+    sample_data_file: nguyen_2020_sample_data.csv
+    published_results_file: nguyen_2020_published_results.csv
+    published_phenotypes_file: nguyen_2020_inframe_mutant_phenotypes.csv
+    
+wetmore:
+    map_file: TnSeq_SB2B_ML5_l5.annotated.csv   
+    counts_file: wetmore_2015_l5_mbarq_merged_counts.csv
+    results_file: Set1_rra_results.csv
+    sample_data_file: SB2B_metadata_carbon_source_set1.csv
+    published_counts_file: SB_count_table.poolcount
+    published_results_file: sb2b_ml5.gene_fitness.tab
+    published_stats_file: sb2b_t_stat.tab
+    
+jasinska:
+    sample_data_file: SraRunTable_Jasinska.txt
+    no_drugs_file: 11-04-23_jasinska-no-drug_mbarq_merged_counts.csv
+    published_frequency_file: Jasinska_barcode_frequency.csv
+   
+ 

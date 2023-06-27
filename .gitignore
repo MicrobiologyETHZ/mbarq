@@ -424,3 +424,4 @@ buildNumber.properties
 *data*
 tests/tmp/expected_outcomes
 tests/test_data/test_files
+! manuscript_data.tar.gz

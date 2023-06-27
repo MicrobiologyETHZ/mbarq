@@ -1,0 +1,15 @@
+name:
+    mbarq_manuscript
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - pandas
+  - numpy
+  - matplotlib
+  - seaborn
+  - plotly
+  - pyaml
+  - sklearn
+  - jupyter
