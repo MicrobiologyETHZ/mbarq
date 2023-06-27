@@ -40,6 +40,7 @@ class CountDataSet:
         sampleIDs = []
         index_cols = []
         for count_file in self.count_files:
+            self.logger.info(f"Processing {count_file}")
             sampleID = Path(count_file).stem.split("_mbarq")[0]
             df = pd.read_table(Path(count_file), sep=self.sep)
             if not self.gene_name:
@@ -58,6 +59,7 @@ class CountDataSet:
         if len(df_list) == 0 | len(index_cols) == 0:
             self.logger.error(f'Could not process any of the files. Check that {self.gene_name} is correct')
             sys.exit(1)
+        self.logger.info(f"Completed processing count files. Merging.")
         fdf = pd.concat(df_list)
         fdf = (fdf.pivot(index=index_cols, columns='sampleID', values=fdf.columns[1])
                .fillna(0)
@@ -72,7 +74,7 @@ class CountDataSet:
         sample_cols = df_to_validate.columns[2:] if self.gene_name else df_to_validate.columns[1:]
         barcode_val = {df_to_validate.columns[0]: Column(str)}
         gene_val = {df_to_validate.columns[1]: Column(str, nullable=True)} if self.gene_name else {}
-        sample_val = {sample_col: Column(float) for sample_col in sample_cols}
+        sample_val = {sample_col: Column(float, coerce=True) for sample_col in sample_cols}
         validation_dict = {**barcode_val, **gene_val, **sample_val}
         schema = DataFrameSchema(
             validation_dict,
@@ -83,8 +85,9 @@ class CountDataSet:
             schema.validate(df_to_validate)
             self.logger.info("Validation complete.")
             return df_to_validate, sample_cols
-        except pandera.errors.SchemaError:
+        except pandera.errors.SchemaError as e:
             self.logger.error('Validation failed. Invalid count dataset.')
+            self.logger.error(e)
             sys.exit(1)
 
     def create_count_table(self, annotated_only=False):

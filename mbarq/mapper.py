@@ -1,4 +1,5 @@
 import collections
+import os
 from typing import Optional, List, Union, Tuple
 from mbarq.core import Barcode, BarSeqData
 from pathlib import Path
@@ -26,7 +27,7 @@ class Mapper(BarSeqData):
                  ) -> None:
         super().__init__(sequencing_file)
         self.barcode_structure = barcode_structure
-        self.genome = genome
+        self.genome = Path(genome)
         self.blastdb = db
         self.output_dir = Path(output_dir)
         self.name = name if name else Path(self.seq_file.strip('.gz')).stem
@@ -75,7 +76,7 @@ class Mapper(BarSeqData):
         for total_inserts, r1 in enumerate(self.stream_seq_file()):
             barcode = Barcode(self.barcode_structure)
             if total_inserts % 100000 == 0:
-                self.logger.info(f'Processed {total_inserts} reads')
+                self.logger.info(f'Processed {total_inserts + 1} reads')
             if barcode.tn_seq in r1.sequence:
                 inserts_with_tp2 += 1
                 barcode.extract_barcode_host(r1)
@@ -90,6 +91,7 @@ class Mapper(BarSeqData):
             else:
                 inserts_without_tp2 += 1
         self.logger.info('Finished Extraction')
+        total_inserts += 1
         self.logger.info(f'Processed {total_inserts} reads')
         self.logger.info(f'\tTotal inserts:\t{total_inserts}\t100.0%')
         self.logger.info(f'\tInserts w transposon:\t{inserts_with_tp2}\t'
@@ -146,7 +148,12 @@ class Mapper(BarSeqData):
         self.logger.info('------------------')
         self.logger.info('Running BLAST on barcode-associated host sequences')
         if not self.blastdb:
-            command0 = f'makeblastdb -in {self.genome} -dbtype nucl'
+            if self.genome.suffix == '.gz':
+                self.blastdb = self.genome.with_suffix("")
+                command0 = f'gunzip -c {self.genome} | makeblastdb -in - -dbtype nucl -out {self.blastdb} -title {self.blastdb}'
+            else:
+                self.blastdb = self.genome
+                command0 = f'makeblastdb -in {self.genome} -dbtype nucl'
             self.logger.info('No BLAST DB provided, generating BLAST DB from reference genome.')
             self.logger.info(f"Blast command:\t{command0}")
             db_return_code = self.check_call(command0)
@@ -154,7 +161,6 @@ class Mapper(BarSeqData):
                 self.logger.error(f"Failed to create blast DB from {self.genome}. "
                                   f"Return code: {db_return_code}")
                 sys.exit(1)
-            self.blastdb = self.genome
         command = f'blastn -task blastn -db {self.blastdb} -out {self.temp_blastn_file} ' \
                   f'-query {self.temp_fasta_file} ' \
                   f'-outfmt "6 {self.blast_columns}" ' \
@@ -165,7 +171,9 @@ class Mapper(BarSeqData):
             self.logger.error(f"blastn failed. "
                               f"Return code: {db_return_code}")
             sys.exit(1)
-
+        files_to_remove = [self.blastdb.with_suffix(self.blastdb.suffix + i) for i in ['.nhr', '.nin', '.nsq']]
+        for file in files_to_remove:
+            os.remove(file)
     def _find_most_likely_positions(self, filter_below, perc_primary_location=0.75) -> None:
         """
          Takes in blast file, and provides most likely locations for each barcode

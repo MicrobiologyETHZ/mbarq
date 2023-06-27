@@ -1,0 +1,6 @@
+1	Prodigal:002006	CDS	15404	19096	.	+	0	ID=DLOLJCDJ_00018;inference=ab initio prediction:Prodigal:002006;locus_tag=DLOLJCDJ_00018;product=hypothetical protein
+1	Prodigal:002006	CDS	19164	19763	.	+	0	"ID=DLOLJCDJ_00019;Name=ompX_1;db_xref=COG:COG3637;gene=ompX_1;inference=ab initio prediction:Prodigal:002006,similar to AA sequence:UniProtKB:P0A917;locus_tag=DLOLJCDJ_00019;product=Outer membrane protein X"
+1	Prodigal:002006	CDS	19915	21978	.	+	0	ID=DLOLJCDJ_00020;inference=ab initio prediction:Prodigal:002006;locus_tag=DLOLJCDJ_00020;product=hypothetical protein
+1	Prodigal:002006	CDS	21975	22253	.	+	0	ID=DLOLJCDJ_00021;inference=ab initio prediction:Prodigal:002006;locus_tag=DLOLJCDJ_00021;product=hypothetical protein
+1	Prodigal:002006	CDS	22263	22559	.	+	0	ID=DLOLJCDJ_00022;inference=ab initio prediction:Prodigal:002006;locus_tag=DLOLJCDJ_00022;product=hypothetical protein
+1	Prodigal:002006	CDS	23195	23647	.	+	0	ID=DLOLJCDJ_00023;inference=ab initio prediction:Prodigal:002006;locus_tag=DLOLJCDJ_00023;product=hypothetical protein

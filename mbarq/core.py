@@ -26,10 +26,10 @@ class FastA:
 
 
 class Barcode:
-    def __init__(self, structure='', sequence=''):
+    def __init__(self, structure='', sequence='', host=''):
         self.structure: str = structure
         self.bc_seq: str = sequence
-        self.host: str = ''
+        self.host: str = host
         self.bc_len: int
         self.tn_seq: str
         self.count: int = -1
