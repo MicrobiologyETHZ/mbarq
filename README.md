@@ -64,3 +64,19 @@ mbarq analyze -i <count_file> -s <sample_data_file> -c <control_file> --treateme
 
 Please see [mBARq documentation](https://mbarq.readthedocs.io/en/latest/) for detailed instructions and tutorials
 
+## Data and code to reproduce mBARq manuscript figures
+
+- Use the instructions below to run the jupyter notebook used to produce figures for the [mbarq manuscript]()
+
+```bash
+
+git clone --branch manuscript https://github.com/MicrobiologyETHZ/mbarq.git
+# or git checkout manuscript
+cd mbarq/manuscript
+tar -xvzf manuscript_files.tar.gz
+mamba env create -f manuscript_environment.yaml
+conda activate mbarq_manuscript
+mkdir figures
+jupyter notebook
+
+```
