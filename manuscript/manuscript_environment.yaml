@@ -13,3 +13,4 @@ dependencies:
   - pyaml
   - scikit-learn
   - jupyter
+  - python-kaleido
