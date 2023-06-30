@@ -173,7 +173,10 @@ class Mapper(BarSeqData):
             sys.exit(1)
         files_to_remove = [self.blastdb.with_suffix(self.blastdb.suffix + i) for i in ['.nhr', '.nin', '.nsq']]
         for file in files_to_remove:
-            os.remove(file)
+            if file.is_file():
+                os.remove(file)
+
+
     def _find_most_likely_positions(self, filter_below, perc_primary_location=0.75) -> None:
         """
          Takes in blast file, and provides most likely locations for each barcode
