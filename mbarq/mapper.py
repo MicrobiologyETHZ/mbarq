@@ -171,10 +171,10 @@ class Mapper(BarSeqData):
             self.logger.error(f"blastn failed. "
                               f"Return code: {db_return_code}")
             sys.exit(1)
-        files_to_remove = [self.blastdb.with_suffix(self.blastdb.suffix + i) for i in ['.nhr', '.nin', '.nsq']]
-        for file in files_to_remove:
-            if file.is_file():
-                os.remove(file)
+        # files_to_remove = [self.blastdb.with_suffix(self.blastdb.suffix + i) for i in ['.nhr', '.nin', '.nsq']]
+        # for file in files_to_remove:
+        #     if file.is_file():
+        #         os.remove(file)
 
 
     def _find_most_likely_positions(self, filter_below, perc_primary_location=0.75) -> None:
