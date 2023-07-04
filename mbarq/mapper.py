@@ -4,6 +4,7 @@ from typing import Optional, List, Union, Tuple
 from mbarq.core import Barcode, BarSeqData
 from pathlib import Path
 import pandas as pd
+import shutil
 import sys
 from mbarq.mbarq_logger import get_logger
 import numpy as np
@@ -21,15 +22,15 @@ class Mapper(BarSeqData):
 
     """
     def __init__(self, sequencing_file: str, barcode_structure: str, name: str = '',
-                 genome: str = '', db: str = '',
+                 genome: str = '',
                  output_dir: str = ".",
                  edit_distance: int = 3
                  ) -> None:
         super().__init__(sequencing_file)
         self.barcode_structure = barcode_structure
-        self.genome = Path(genome)
-        self.blastdb = db
         self.output_dir = Path(output_dir)
+        self.genome = shutil.copy(genome, self.output_dir/Path(genome).name) if Path(genome).is_file() else ''
+        self.blastdb = ''
         self.name = name if name else Path(self.seq_file.strip('.gz')).stem
         self.temp_fasta_file = self.output_dir / f"{self.name}.fasta"
         self.temp_blastn_file = self.output_dir / f"{self.name}.blastn"
@@ -171,10 +172,10 @@ class Mapper(BarSeqData):
             self.logger.error(f"blastn failed. "
                               f"Return code: {db_return_code}")
             sys.exit(1)
-        # files_to_remove = [self.blastdb.with_suffix(self.blastdb.suffix + i) for i in ['.nhr', '.nin', '.nsq']]
-        # for file in files_to_remove:
-        #     if file.is_file():
-        #         os.remove(file)
+        files_to_remove = [self.blastdb.with_suffix(self.blastdb.suffix + i) for i in ['', '.nhr', '.nin', '.nsq']]
+        for file in files_to_remove:
+            if file.is_file():
+                os.remove(file)
 
 
     def _find_most_likely_positions(self, filter_below, perc_primary_location=0.75) -> None:
@@ -338,7 +339,12 @@ class Mapper(BarSeqData):
                        'sstrand': 'strand',
                        'total_count': 'abundance_in_mapping_library'}
         self.positions = self.positions.rename(rename_dict, axis=1)
+        self.logger.info('Writting transopson insertion sites to file')
         self.positions.to_csv(self.map_file, index=False)
+        self.logger.info("Removing intermediate files")
+        os.remove(self.temp_fasta_file)
+        os.remove(self.temp_blastn_file)
+        self.logger.info("Done")
 
 
 class AnnotatedMap:
@@ -363,8 +369,6 @@ class AnnotatedMap:
         self.annotated_map_file: Path = self.output_dir / f'{self.name}.annotated.csv'
         self.positions: pd.DataFrame = positions if not positions.empty else pd.read_csv(self.map_file)
         self.temp_bed_file: Path = self.output_dir / f"{self.name}.bed"
-        self.temp_bed_results_file: Path = self.output_dir / f"{self.name}.bed.intersect.tab" #todo don't think I need these
-        self.temp_bed_closest_file: Path = self.output_dir / f"{self.name}.bed.closest.tab"
 
     def _find_annotation_overlaps(self, intersect=True):
 

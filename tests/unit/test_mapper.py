@@ -254,7 +254,7 @@ def test_annotate_closest(map_test_data, tn5_structure, test_gff, tmpdir):
     assert all([v == out_dict[k] for k, v in expected_dict.items()])
 
 
-def test_annotate_closest_numeric_chr(map_test_data):
+def test_annotate_closest_numeric_chr(map_test_data, tmpdir):
     _, _, _, mapping_dir = map_test_data
     map_file = mapping_dir / "numeric_chr_map.csv"
     gff_file = mapping_dir / 'numeric_chr.gff'
@@ -262,7 +262,7 @@ def test_annotate_closest_numeric_chr(map_test_data):
     identifiers = ('ID', 'locus_tag')
     am = AnnotatedMap(map_file=map_file, annotation_file=gff_file,
                       name='test_numeric_chr',
-                      feature_type=feature_type, identifiers=identifiers, output_dir=".")
+                      feature_type=feature_type, identifiers=identifiers, output_dir=tmpdir)
     am._validate_annotations()
     am._find_annotation_overlaps(intersect=False)
     assert am.annotated_positions['ID'].isna().sum() == 0
