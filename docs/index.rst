@@ -62,7 +62,7 @@ Quick Start
 
 .. code-block::
 
-   mbarq analyze -i <count_file> -s <sample_data_file> -c <control_file> --treatement_column treatement \
+   mbarq analyze -i <count_file> -s <sample_data_file> -c <control_file> --treatment_column treatment \
    --batch_column batch --baseline control
 
 
