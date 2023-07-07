@@ -18,7 +18,7 @@
 
 ## and more!
 
-- Explore barcode/gene abundances across conditons
+- Explore barcode/gene abundances across conditions
 - Get [STRING](https://string-db.org/) interaction network for your hits
 - Compare hits between different libraries
 

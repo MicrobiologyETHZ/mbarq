@@ -6,7 +6,7 @@
 
 **Required Inputs**
 
-- Sample sequencing file. Can be FASTQ of FASTA, commpressed is accepted. 
+- Sample sequencing file. Can be FASTQ of FASTA, compressed is accepted. 
 - Transposon construct structure
 
 **Sugested Inputs**
@@ -19,7 +19,7 @@
     |---------|-----------|
     | ATGCATG | Barcode1  |
 
-- By default, will try to merge barcodes with edit distance of <= 2. This can be changed with ``-e``
+- By default, will try to merge barcodes with edit distance of <= 2. This can be changed with ``-e``.
 
 **Output Files**
 
@@ -92,7 +92,7 @@ Options:
 - If you would like to keep one of the annotation (attribute) columns from the mapping file, it can be specified with `-a` option. 
 
 **Output file**
-- `csv` file, where columns are barcodes, attribute if specified, and one column containing counts for each sample
+- `csv` file, where columns are barcodes, attribute if specified, and one column containing counts for each sample.
 
 ### Example Usage
 

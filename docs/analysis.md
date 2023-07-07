@@ -31,7 +31,7 @@
 
 - We highly recommend adding control strains (i.e. strains with barcodes inserted into fitness-neutral locations) to the barcode library. This greatly facilitates quality control and analysis of the data.
 - If control strains are present in the library, the control barcodes can be specified with control file using ``--control_file`` option. 
-  - In the simplest option, control file will only containing the barcode sequences of the control strains (1 barcode per line). 
+  - In the simplest option, control file will only contain the barcode sequences of the control strains (1 barcode per line). 
   - If different control strains were added at different concentrations, the concentration of each barcode can be specified in the second column. 
   - If control strains included strains of different genotypes (ex. wild type as well as negative control strains), the genotype can be specified in the 3rd column. 
   - Only wild type strains will be used for quality control and analysis. This should be specified as `wt`, `WT`, or `wildtype`. 

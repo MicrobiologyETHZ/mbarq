@@ -7,23 +7,20 @@
 **Required Inputs**
 
 - FASTQ file generated from sequencing barcoded mutant library
-- genome FASTA file of the bacteria used to generate the library
+- Genome FASTA file of the bacteria used to generate the library
 - Transposon construct structure **add diagram**.
 
 **Suggested inputs**
 
 - Annotation file in GFF3 format (this will allow mapping insertion sites to genomic features). 
 - Filtering parameter (``-l``, in our hands, filtering barcodes supported by less than 100 reads produced reliable library annotations. This of course is dependent on depth of the sequencing, and should be tested for each use case).
-- Report closest gene (``-c``). If ``gff`` file is provided, by default, ``mbarq`` will only report features overlapping the insertion site. In addition, ``mbarq`` can report the location and distance of the closest downstream feature for barcodes that do not directly overlap any features. 
+- Report the closest gene (``-c``). If ``gff`` file is provided, by default, ``mbarq`` will only report features overlapping the insertion site. In addition, ``mbarq`` can report the location and distance of the closest downstream feature for barcodes that do not directly overlap any features. 
 
 **Output files**
 
-``library.annotated.csv``: final library map with annotations 
-
-``library.map.csv``: final library map without annotations 
-
-``library_mapping.log``: log file 
-
+``library.annotated.csv``: final library map with annotations
+``library.map.csv``: final library map without annotations
+``library_mapping.log``: log file
 ``library.blastn``: blast output for each barcode: host sequence;  
 ``library.fasta``: fasta files of barcodes and host sequences (>barcode\nhostsequence); 
 ``library.output.bed``: bedtools intersection of gff and barcode locations

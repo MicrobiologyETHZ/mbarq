@@ -7,7 +7,7 @@ In the paper, the authors generated and sequenced a barcoded library of Salmonel
 
 ## Setup
 
-1. Make sure you have followed [Installation instructions](install.md)
+1. Make sure you have followed the [installation instructions](install.md).
 2. Download and unpack [the test data](walkthrough_downloads/nguyenb.tar.gz). After running the command below, you should see a directory named `nguyenb_walkthrough`, which should contain all the data you need for this walkthrough. 
 
 ```shell
@@ -17,7 +17,7 @@ ls
 ```
 
 
-2. Make sure `mbarq` is installed and you have created and activated the `mbarq` environment
+3. Make sure `mbarq` is installed, and you have created as well as activated the `mbarq` environment.
 
 ```shell
 
@@ -50,7 +50,7 @@ To map barcodes to insertions run:
 
 mbarq map -f library_11_1_sub_1.fq.gz -g SL1344.fna -a SL1344.gff \
           -tn B17N13GTGTATAAGAGACAG -n nguyenb_library_map
- 
+          
 ```
 
 The final results will be saved in `nguyenb_library_map.annotated.csv`. Note that this was done on a test dataset, so we did not apply any filtering to the results. In reality, we recommend filtering out barcodes that are supported by only a few reads. The filtering threshold will vary from dataset to dataset, anywhere from 10 to 100 could be reasonable (for example, specifying `-l 10` will filter out any barcodes supported by less than 10 reads). 
@@ -81,7 +81,7 @@ You can examine the resulting count table: `dnaid1315_124_subsample_mbarq_counts
 
 ## Merging count files
 
-After generating the count files for each of your samples, you can merge them together into a single file using `mbarq merge`. To demonstrate this, we will be using 2 previously generated count files for samples dnaid1315_17 and dnaid1315_18
+After generating the count files for each of your samples, you can merge them together into a single file using `mbarq merge`. To demonstrate this, we will be using 2 previously generated count files for samples dnaid1315_17 and dnaid1315_18.
 
 **Files needed for this analysis**:
 
@@ -105,7 +105,7 @@ You can also place all the count files into the same directory, and specify dire
 
 ## Analysis
 
-The goal of this experiment was to identify potential fitness factors on different days of Salmonella infection. Thus we want to compare mutant abundances on each day to the inoculum (mutant library + control strains cultured in LB), labeled as `d0`, to samples from `d1`, `d2`, `d3`, and `d4`.
+The goal of this experiment was to identify potential fitness factors on different days of Salmonella infection. Thus, we want to compare mutant abundances on each day to the inoculum (mutant library + control strains cultured in LB), labeled as `d0`, to samples from `d1`, `d2`, `d3`, and `d4`.
 
 
 
