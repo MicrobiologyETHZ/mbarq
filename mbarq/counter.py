@@ -50,7 +50,7 @@ class BarcodeCounter(BarSeqData):
             bc_annotations = pd.read_csv(self.map_file)
             if 'barcode_count' in bc_annotations.columns:
                 self.logger.error('"barcode_count" column already present in the '
-                                  'mapping/annoations file. Please rename to avoid confusion')
+                                  'mapping/annotation file. Please rename to avoid confusion')
                 sys.exit(1)
             if self.rev_complement:
                 if 'revcomp_barcode' not in bc_annotations.columns:
@@ -181,5 +181,5 @@ class BarcodeCounter(BarSeqData):
         self.logger.info('------------------')
         self._annotate_barcodes(filter_low, annotated_only)
         self.logger.info("Finished!")
-        self.logger.info(f'Writting final counts to {self.counts_file}')
+        self.logger.info(f'Writing final counts to {self.counts_file}')
         self._write_counts_file()

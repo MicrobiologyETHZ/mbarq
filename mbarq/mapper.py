@@ -339,7 +339,7 @@ class Mapper(BarSeqData):
                        'sstrand': 'strand',
                        'total_count': 'abundance_in_mapping_library'}
         self.positions = self.positions.rename(rename_dict, axis=1)
-        self.logger.info('Writting transopson insertion sites to file')
+        self.logger.info('Writing transposon insertion sites to file')
         self.positions.to_csv(self.map_file, index=False)
         self.logger.info("Removing intermediate files")
         os.remove(self.temp_fasta_file)

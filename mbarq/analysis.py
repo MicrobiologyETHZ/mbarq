@@ -146,7 +146,7 @@ class SampleData:
             self.sampleIDs = list(self.sampleData[sampleID].unique())
             self.logger.info("Validation complete.")
         except pandera.errors.SchemaError:
-            self.logger.error('Valdiation failed: '
+            self.logger.error('Validation failed: '
                               'Invalid sample data file. '
                               'Please ensure `--treatment_columns` '
                               'and/or --`batch_column` are found in the file.')
@@ -336,7 +336,7 @@ class Experiment:
 
     def run_mageck(self, treated, controls, contrast_table, run_name, normalize_by='', run=True):
         """
-        count file could be produced before or after batchcorrection
+        count file could be produced before or after batch correction
         """
         self.logger.info("Running MAGeCK")
         prefix = self.output_dir / run_name
