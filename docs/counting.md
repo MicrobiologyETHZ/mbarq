@@ -89,7 +89,7 @@ Options:
 - Prefix for the output file.
 
 **Suggested Inputs**
-- If you would like to keep one of the annotation (attribute) columns from the mapping file, it can be specified with `-a` option. 
+- If you would like to keep one of the annotation (attribute) columns from the mapping file, it can be specified with `-a` option. Include this option, if you plan to run `mbarq analyze`.
 
 **Output file**
 - `csv` file, where columns are barcodes, attribute if specified, and one column containing counts for each sample.

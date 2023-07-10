@@ -18,10 +18,10 @@
 - Sample data file (CSV) in the following format:
 
 | sampleID | batch | treatment | 
-| :--- | :---: | :---: | 
-| Sample1 | B1 | control |
-| Smaple2 | B1 | treatment1 | 
-| ... | ... | ... |
+|:---------| :---: | :---: | 
+| Sample1  | B1 | control |
+| Sample2  | B1 | treatment1 | 
+| ...      | ... | ... |
 
 - Name of the column indicating batch in the sample data should be specified using ``--batch_column`` (For the example above, ``--batch_column batch``)
 - Name of the column indicating treatment in the sample data should be specified using ``--treatment_column`` (for the example above, `` --treatment_column treatment``)
