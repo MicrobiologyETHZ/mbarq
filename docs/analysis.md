@@ -1,6 +1,6 @@
 # Analyze
 
-## Identify differentially abundant genes between the control (the inoculum) and treatment conditons with `mbarq analyze`
+## Identify differentially abundant genes between the control (the inoculum) and treatment conditions with `mbarq analyze`
 
 ### Input/Output Files
 

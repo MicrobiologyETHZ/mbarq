@@ -51,7 +51,7 @@ mbarq merge -d <directory_with_count_files> -a locus_tag -n ExperimentName -o .
 
 ```
 
-- Identify enriched/deplted genes between treatments and control
+- Identify enriched/depleted genes between treatments and control
 
 ```
 
@@ -60,7 +60,7 @@ mbarq analyze -i <count_file> -s <sample_data_file> -c <control_file> --treatmen
 
 ```
 
-## Documentation and Walkthoughs:
+## Documentation and Walkthrough:
 
 Please see [mBARq documentation](https://mbarq.readthedocs.io/en/latest/) for detailed instructions and tutorials
 

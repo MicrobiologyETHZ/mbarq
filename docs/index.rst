@@ -58,7 +58,7 @@ Quick Start
    mbarq merge -d <directory_with_count_files> -a locus_tag -n ExperimentName -o .
 
 
-- Identify enriched/deplted genes between treatments and control
+- Identify enriched/depleted genes between treatments and control
 
 .. code-block::
 
