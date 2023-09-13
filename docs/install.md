@@ -11,7 +11,7 @@ You will need ``conda`` to install and run ``mBARq``.
 ## Option 1
 
 
-- Download [this environment file](mbarq_environment_install.yaml) and run
+- Download [this environment file](mbarq_environment_install.yaml) and run 
 
 ```shell
 
@@ -22,7 +22,7 @@ You will need ``conda`` to install and run ``mBARq``.
 
 ## Option 2
 
-- Clone the repository and create and activate conda environment
+- Clone the repository and create and activate the conda environment
 
 ```shell
 

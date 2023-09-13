@@ -9,7 +9,7 @@
 - Sample sequencing file. Can be FASTQ of FASTA, compressed is accepted. 
 - Transposon construct structure
 
-**Sugested Inputs**
+**Suggested Inputs**
 
 - Mapping file. Can be the mapping file produced by ``mbarq map``, or any ``csv`` file, where the first column is titled ``barcode`` and contains the barcode sequences.
 - For example:
@@ -19,7 +19,7 @@
     |---------|-----------|
     | ATGCATG | Barcode1  |
 
-- By default, will try to merge barcodes with edit distance of <= 2. This can be changed with ``-e``.
+- By default, will try to merge barcodes with an edit distance of <= 2. This can be changed with ``-e``.
 
 **Output Files**
 

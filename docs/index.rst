@@ -6,7 +6,7 @@
 Welcome to mBARq's documentation!
 =================================
 
-Transposon mutagenesis is a powerful technique that allows identification of bacterial fitness factors under different environmental conditions. Recently, a number of studies have used  barcoded transposon mutant libraries to increase the throughput of the experiments. mBARq allows easy processing and analysis of barcoded mutant libraries for any transposon construct (Tn5, *mariner*, *etc*).
+Transposon mutagenesis is a powerful technique that allows the identification of bacterial fitness factors under different environmental conditions. Recently, several studies have used  barcoded transposon mutant libraries to increase the throughput of the experiments. mBARq allows easy processing and analysis of barcoded mutant libraries for any transposon construct (Tn5, *mariner*, *etc*).
 
 
 Workflow
@@ -16,7 +16,7 @@ Workflow
 
 The main steps of the workflow involve:
 
-1. Mapping of each barcode to insertion location in the genome.
+1. Mapping of each barcode to the insertion location in the genome.
 2. Profiling barcode abundances across samples.
 3. Mutant fitness analyses.
 4. Exploratory analysis using `mBARq web app`_
@@ -50,7 +50,7 @@ Quick Start
 
 
 
-- Merge barcode counts from multiple samples into final table
+- Merge barcode counts from multiple samples into the final table
 
 
 .. code-block::

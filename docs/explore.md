@@ -8,7 +8,7 @@
 
 ![library](images/mbarq_app_library.png)
 
-## Explore interactive PCA plot to look for patterns and outliers
+## Explore interactive PCA plots to look for patterns and outliers
 
 ![pca](images/mbarq_app_pca.png)
 

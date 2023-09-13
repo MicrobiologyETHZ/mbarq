@@ -13,8 +13,8 @@
 **Suggested inputs**
 
 - Annotation file in GFF3 format (this will allow mapping insertion sites to genomic features). 
-- Filtering parameter (``-l``, in our hands, filtering barcodes supported by less than 100 reads produced reliable library annotations. This of course is dependent on depth of the sequencing, and should be tested for each use case).
-- Report the closest gene (``-c``). If ``gff`` file is provided, by default, ``mbarq`` will only report features overlapping the insertion site. In addition, ``mbarq`` can report the location and distance of the closest downstream feature for barcodes that do not directly overlap any features. 
+- Filtering parameter (``-l``, in our hands, filtering barcodes supported by less than 100 reads produced reliable library annotations. This of course is dependent on the depth of the sequencing, and should be tested for each use case).
+- Report the closest gene (``-c``). If a ``gff`` file is provided, by default, ``mbarq`` will only report features overlapping the insertion site. In addition, ``mbarq`` can report the location and distance of the closest downstream feature for barcodes that do not directly overlap any features. 
 
 **Output files**
 
@@ -50,7 +50,7 @@ Options:
   -tn, --transposon STR         transposon construct structure, consisting of the following:
                                   1. barcode length, written as B[# of nt], eg. B17
                                   2. conserved sequence motif, usually part of transposons inverted repeat (IR), eg. GTGTATAAGAGACAG
-                                  3. if there are extra nucleotides between barcode and
+                                  3. if there are extra nucleotides between the barcode and
                                      conserved sequence motif, indicate with N[# of nt], eg. N13
                                The default represents the following construct:
                                ----------------------------------------------------------------------------
@@ -80,7 +80,7 @@ Options:
 
 ## Re-annotate mapping file
 
-Library map file `library.map.csv` can be re-annotated (for example, if you would like to use different feature type or attributes) without re-mapping using `mbarq annotate-mapped`. 
+Library map file `library.map.csv` can be re-annotated (for example, if you would like to use different feature types or attributes) without re-mapping using `mbarq annotate-mapped`. 
 
 ### Example Usage
 ```shell
