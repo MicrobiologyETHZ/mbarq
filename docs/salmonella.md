@@ -128,7 +128,7 @@ mkdir results
 mbarq analyze -i library_11_1_mbarq_merged_counts.csv -s sample_data.csv -c control_strains.csv --treatment_column day --baseline d0 -o results 
 
 ```
-`mbarq analyze` creates a folder containing `library_11_1_mbarq_merged_counts_rra_results.csv` that lists log fold changes (LFC) and false discovery rates (FDR) for each gene in the library. You can upload this file to the [mBARq App](https://asintsova-mbarq-app-home-0bmqtg.streamlit.app/) to create heatmaps, perform functional analysis, and visualize the results in the context of KEGG metabolic maps.
+`mbarq analyze` creates a folder containing `library_11_1_mbarq_merged_counts_rra_results.csv` that lists log fold changes (LFC) and false discovery rates (FDR) for each gene in the library. You can upload this file to the [mBARq App](https://mbarq-app.herokuapp.com/) to create heatmaps, perform functional analysis, and visualize the results in the context of KEGG metabolic maps.
 
 
 
