@@ -9,7 +9,7 @@ The main steps of the workflow involve:
 
 ## Installation:
 
-- Clone the repository and create and activate conda environment
+- Clone the repository and create and activate the conda environment
 
 ```
 git clone https://github.com/MicrobiologyETHZ/mbarq.git
@@ -24,7 +24,7 @@ mbarq --help
 
 ## Quick Start
 
-- Map each barcode to insertion location in the genome
+- Map each barcode to the insertion location in the genome
 
 ```
 
@@ -43,7 +43,7 @@ mbarq count  -f <sample.fastq.gz> -m <library_mapping_file.csv> \
 ```
 
 
-- Merge barcode counts from multiple samples into final table
+- Merge barcode counts from multiple samples into the final table
 
 ```
 
