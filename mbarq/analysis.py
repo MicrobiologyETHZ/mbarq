@@ -383,9 +383,12 @@ class Experiment:
         self.logger.info('Writing out final results.')
         if not contrasts_run:
             contrasts_run = self.sd.contrasts
+        try:
+            res = pd.concat([pd.read_table(self.output_dir / f"{self.name}_{i}_vs_{self.sd.baseline}.gene_summary.txt")
+                            .assign(contrast=i) for i in contrasts_run])
+        except:
+            print(f"Warning: No such file or directory: {self.output_dir}/{self.name}_{i}_vs_{self.sd.baseline}.gene_summary.txt")
 
-        res = pd.concat([pd.read_table(self.output_dir / f"{self.name}_{i}_vs_{self.sd.baseline}.gene_summary.txt")
-                        .assign(contrast=i) for i in contrasts_run])
         bc_res = pd.concat([pd.read_table(self.output_dir / f"{self.name}_{i}_vs_{self.sd.baseline}.sgrna_summary.txt")
                         .assign(contrast=i) for i in contrasts_run]).rename({'sgrna': 'barcode', 'Gene': 'Name'}, axis=1)
         fres = res[['id', 'num', 'neg|lfc', 'neg|fdr', 'pos|fdr', 'contrast']]
