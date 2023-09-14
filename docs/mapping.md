@@ -18,12 +18,12 @@
 
 **Output files**
 
-``library.annotated.csv``: final library map with annotations
-``library.map.csv``: final library map without annotations
-``library_mapping.log``: log file
-``library.blastn``: blast output for each barcode: host sequence;  
-``library.fasta``: fasta files of barcodes and host sequences (>barcode\nhostsequence); 
-``library.output.bed``: bedtools intersection of gff and barcode locations
+``library.annotated.csv``: final library map with annotations \
+``library.map.csv``: final library map without annotations \
+``library_mapping.log``: log file \
+``library.blastn``: blast output for each barcode: host sequence;  \
+``library.fasta``: fasta files of barcodes and host sequences (>barcode\nhostsequence); \
+``library.output.bed``: bedtools intersection of gff and barcode locations \
 
 
 ### Example Usage
