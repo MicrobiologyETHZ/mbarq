@@ -18,12 +18,12 @@
 
 **Output files**
 
-``library.annotated.csv``: final library map with annotations \
-``library.map.csv``: final library map without annotations \
-``library_mapping.log``: log file \
-``library.blastn``: blast output for each barcode: host sequence;  \
-``library.fasta``: fasta files of barcodes and host sequences (>barcode\nhostsequence); \
-``library.output.bed``: bedtools intersection of gff and barcode locations \
+- ``library.annotated.csv``: final library map with annotations 
+- ``library.map.csv``: final library map without annotations 
+- ``library_mapping.log``: log file 
+- ``library.blastn``: blast output for each barcode
+- ``library.fasta``: fasta files of barcodes and host sequences
+- ``library.output.bed``: bedtools intersection of gff and barcode locations 
 
 
 ### Example Usage
@@ -81,6 +81,11 @@ Options:
 ## Re-annotate mapping file
 
 Library map file `library.map.csv` can be re-annotated (for example, if you would like to use different feature types or attributes) without re-mapping using `mbarq annotate-mapped`. 
+
+**Required Inputs**
+
+- Unannotated barcode file produced by ``mbarq map``
+- An annotation file in gff format
 
 ### Example Usage
 ```shell

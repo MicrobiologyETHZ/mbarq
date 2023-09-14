@@ -21,8 +21,8 @@
 
 - By default, will try to merge barcodes with an edit distance of <= 2. This can be changed with ``-e``.
 
-**Output Files**
-
+**Output File**
+- A ``csv`` file containing the barcode counts.
 
 
 ### Example Usage

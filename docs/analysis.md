@@ -45,6 +45,16 @@
 
 **Output Files**
 
+- ``mbarq_merged_counts_batch.txt``: Information on sample and batch
+- ``mbarq_merged_counts.correlations.csv``: Correlation for each batch
+- ``mbarq_merged_counts_rra_results.csv``: Information for each gene about number of barcodes, LFC and false discovery rate
+
+For each comparison:
+- ``mbarq_merged_counts_cond1_vs_cond0.gene_summary.txt``: Summary for each gene
+- ``mbarq_merged_counts_cond1_vs_cond0.report.Rmd``: MAGeCK Comparison Report
+- ``mbarq_merged_counts_cond1_vs_cond0.sgrna_summary.txt``: Summary for each sgRNA
+
+
 ### Example Usage
 
 ```bash 
