@@ -5,7 +5,7 @@ The main steps of the workflow involve:
 1. Mapping each barcode to insertion location in the genome.
 2. Profiling barcode abundances across samples.
 3. Mutant fitness analyses.
-4. Exploratory analysis using [mBARq web app](https://share.streamlit.io/asintsova/mbarq_app/main/Home.py)
+4. Exploratory analysis using [mBARq web app](https://mbarq-app.herokuapp.com/)
 
 ## Installation:
 
