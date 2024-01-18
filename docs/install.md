@@ -8,6 +8,13 @@ You will need ``conda`` to install and run ``mBARq``.
    
 ```
 
+
+```{note}
+  
+  Some of the mBARq dependencies can only run on Linux of MacOS, as a consequence mBARq will also not run on a Windows system. 
+
+```
+
 ## Option 1
 
 

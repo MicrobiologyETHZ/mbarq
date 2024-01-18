@@ -15,9 +15,11 @@ from test_utils import assert_files_are_same
 
 
 def test_extract_barcodes_rbseq(count_test_data_tn5, tn5_structure, tmpdir, dnaid1315_expected_outcomes):
-    """Check counting barcodes in fasta file"""
-    r1, _, _ = count_test_data_tn5
-    seq_data = BarcodeCounter(r1, tn5_structure, output_dir=tmpdir)
+    """Check counting barcodes in fasta file
+    
+    """
+    small_count_file, seq_file, map_file = count_test_data_tn5
+    seq_data = BarcodeCounter(seq_file, tn5_structure, output_dir=tmpdir)
     seq_data._extract_barcodes()
     with open(dnaid1315_expected_outcomes/"test_extract_barcodes_rbseq.json", 'r') as fh:
         expected_counted = Counter(json.load(fh))

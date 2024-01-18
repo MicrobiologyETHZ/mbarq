@@ -4,7 +4,7 @@ from mbarq.core import Barcode, BarSeqData, FastA
 
 experiments = ['rbseq', 'wish']
 
-def test__parse_structure():  # todo !!!!
+def test__parse_structure():  
     # RBSeq
     barcode = Barcode('B17N13GTGTATAAGAGACAG')
     assert barcode.bc_len == 17
@@ -27,13 +27,19 @@ def test__parse_structure():  # todo !!!!
 
 
 def test_extract_barcode_host_rbseq(tn5_structure, map_test_data):
-    r1, genome = map_test_data
+    """
+    tn5_structure: 'B17N13GTGTATAAGAGACAG'
+    map_test_data: seq_file, genome_file, List[Barcode], mapping_dir
+
+    """
+
+    r1, genome, _, _ = map_test_data
     seq_data = BarSeqData(r1)
-    r = list(seq_data.stream_seq_file())[1000]
+    r = list(seq_data.stream_seq_file())[4]
     barcode = Barcode(tn5_structure)
     barcode.extract_barcode_host(r)
-    expected_barcode = 'GCGGTGACAGGATCGGA'
-    expected_host = 'AGCAACAACTCTGCTATGAGATTTAGATCGGAAGAGCACACGTCTGAACTCCAGTCACATTACTCGATCGCGTATGCCGTCTTCTGCTTGAAAAGGGGGGGGGGG'
+    expected_barcode = 'CGTCAGGGCAGCGAACA'
+    expected_host = 'AACTCAGTCTAACGCCAAGGGTCTGCTGGGCGCGCTGCGTGATATGCAGGCAAAAGCGAAAGCCGCAGGTCACACGCTGGCGCTCTCCATGAGTATCGGCGGCTG'
     out_barcode, out_host = barcode.bc_seq, barcode.host
     assert out_barcode == expected_barcode
     assert out_host == expected_host

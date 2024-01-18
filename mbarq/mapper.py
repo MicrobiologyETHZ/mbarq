@@ -173,9 +173,9 @@ class Mapper(BarSeqData):
                               f"Return code: {db_return_code}")
             sys.exit(1)
         files_to_remove = [self.blastdb.with_suffix(self.blastdb.suffix + i) for i in ['', '.nhr', '.nin', '.nsq']]
-        for file in files_to_remove:
-            if file.is_file():
-                os.remove(file)
+        # for file in files_to_remove:
+        #     if file.is_file():
+        #         os.remove(file)
 
 
     def _find_most_likely_positions(self, filter_below, perc_primary_location=0.75) -> None:
@@ -245,66 +245,42 @@ class Mapper(BarSeqData):
         if pps.empty:
             self.logger.error('No mapped barcodes found. Try lowering the filter_below cutoff')
             sys.exit(1)
-        positions_sorted = (pps.groupby('sseqid')
-                            .apply(pd.DataFrame.sort_values, 'insertion_site')
-                            .drop(['sseqid'], axis=1)
-                            .reset_index()
-                            .drop(['level_1'], axis=1))
 
-        # Get indices for rows with collisions
-        collision_index = list(
-            positions_sorted[(positions_sorted['insertion_site'].diff() < 5) & (positions_sorted['insertion_site'].diff() >= 0)].index)
-        collision_index.extend([i - 1 for i in collision_index if i - 1 not in collision_index])
-        collision_index.sort()
-
-        # Barcodes without collisions
-
-        unique = positions_sorted[~positions_sorted.index.isin(collision_index)]
-
-        collisions = positions_sorted.iloc[collision_index]
-        if collisions.empty:
-            self.positions = unique[['barcode', 'total_count', 'insertion_site', 'sseqid', 'sstrand']]
-        else:
-            def row_to_barcode(structure, row):
-                bc = Barcode(structure)
-                bc.bc_seq = row.barcode
-                bc.chr = row.sseqid
-                bc.start = row.insertion_site
-                bc.strand = row.sstrand
-                bc.count = row.total_count
-                return bc
-
-            bcs = []
-            final_bcs = []
-            for i, r in collisions.iterrows():
-                bcs.append(row_to_barcode(self.barcode_structure, r))
-
-            bc = bcs.pop(0)
-            cnt = bc.count
-            while len(bcs) > 0:
-                bc2 = bcs.pop(0)
-                if bc.chr != bc2.chr or abs(bc.start - bc2.start) > 5:
-                    bc.count = cnt
-                    final_bcs.append(bc)
-                    bc = bc2
-                    cnt = bc2.count
+        # Sort the DataFrame to ensure consecutive rows have similar 'barcode' values
+        pps = pps.sort_values(['sseqid', 'insertion_site', 'barcode'])
+        merged_rows = []
+        count = None
+        for index, row in pps.iterrows():
+            if not count:
+                # First row, initialize variables
+                current_row = row
+                total_abundance_in_mapping_librarys = row['total_count']
+                count = 1
+            else:
+                # Check conditions for merging
+                if (sum([a!=b for a,b in zip(current_row['barcode'], row['barcode'])]) <= self.edit_distance and
+                        current_row['sseqid'] == row['sseqid'] and
+                        abs(current_row['insertion_site'] - row['insertion_site']) <= 5):
+                    # Merge rows
+                    current_row['barcode'] = current_row['barcode'] if total_abundance_in_mapping_librarys > row['total_count'] else row['barcode']
+                    total_abundance_in_mapping_librarys += row['total_count']
+                    count += 1
+                    current_row['insertion_site'] = min(current_row['insertion_site'], row['insertion_site'])
                 else:
-                    if bc.editdistance(bc2) > self.edit_distance:
-                        bc.count = cnt
-                        final_bcs.append(bc)
-                        bc = bc2
-                        cnt = bc2.count
-                    else:
-                        cnt += bc2.count
-                        if bc.count < bc2.count:
-                            bc = bc2
-            if bc not in final_bcs:
-                final_bcs.append(bc)
-            resolved_collisions = pd.DataFrame([[bc.chr, bc.start, bc.strand,
-                                                 bc.bc_seq, bc.count] for bc in final_bcs],
-                                               columns=['sseqid', 'insertion_site', 'sstrand', 'barcode', 'total_count'])
-            self.positions = pd.concat([unique, resolved_collisions])[['barcode', 'total_count', 'insertion_site',
-                                                                       'sseqid', 'sstrand']]
+                    # Append merged row to the result
+                    current_row['total_count'] = total_abundance_in_mapping_librarys
+                    merged_rows.append(current_row)
+                    # Reset variables for the next group
+                    current_row = row
+                    total_abundance_in_mapping_librarys = row['total_count']
+                    count = 1
+
+        # Append the last merged row
+        current_row['total_count'] = total_abundance_in_mapping_librarys
+        merged_rows.append(current_row)
+        # Create a new DataFrame from the merged rows
+        self.positions = pd.DataFrame(merged_rows, columns=['barcode', 'total_count', 'insertion_site', 'sseqid', 'sstrand'])
+        
         self.logger.info('------------------')
         self.logger.info("Finished mapping barcodes")
         self.logger.info(f"Final number of barcodes found: {self.positions.barcode.nunique()}")
