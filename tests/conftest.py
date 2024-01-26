@@ -5,7 +5,7 @@ from pathlib import Path
 from mbarq.core import Barcode
 
 root = Path("tests/mbarq_test_data")
-#root = Path("/Users/ansintsova/Downloads/test_mbarq/mbarq_test_data")
+
 @pytest.fixture
 def tn5_structure():
     return 'B17N13GTGTATAAGAGACAG'
@@ -42,40 +42,36 @@ def test_gff():
 
 
 @pytest.fixture
-def count_test_data_tn5():
-    small_count_file = root/"dnaid1315/test_data/count_test.fasta.gz"
-    seq_file = root/"dnaid1315/test_data/dnaid1315_124_subsample.fasta.gz"
-    map_file = root/"dnaid1315/ref/library_11_1.annotated.csv"
-    return (small_count_file, seq_file, map_file)
-
-
-@pytest.fixture
-def count_test_data_wish():
-    seq_file = f'./tests/test_files/LibraryA_pilot2.fq.gz'
-    map_file = f'./tests/test_files/20210520_BarcodeList.csv'
+def count_test_data():
+    seq_file = root/"counting/dnaid1315_124_subsample.fasta.gz"
+    map_file = root/"counting/library.annotated.csv"
     return (seq_file, map_file)
 
 
+# @pytest.fixture
+# def count_test_data_wish():
+#     seq_file = f'./tests/test_files/LibraryA_pilot2.fq.gz'
+#     map_file = f'./tests/test_files/20210520_BarcodeList.csv'
+#     return (seq_file, map_file)
+
+
 @pytest.fixture
-def merge_test_data_tn5():
-    count_files = [f for f in (root/"dnaid1315/ref").glob("dnaid1315_*_mbarq_counts.csv")]
+def merge_test_data():
+    count_files = [f for f in (root/"counting").glob("*_mbarq_counts.csv")]
     return count_files, 'Name'
 
 @pytest.fixture
-def analysis_test_data_tn5():
-    control1col = root/"dnaid1315/ref/controls_1col.csv"
-    control2col = root / "dnaid1315/ref/controls_2col.csv"
-    control3col = root / "dnaid1315/ref/controls_3col.csv"
-    control2col_short = root / "dnaid1315/ref/controls_2col_short.csv"
-    merged_counts = root/"dnaid1315/ref/example_mbarq_merged_counts.csv"
-    sample_data = root/"dnaid1315/ref/example_sample_data.csv"
-    no_wt = root/"dnaid1315/ref/controls_3col_no_wt.csv"
-    control3bc = root/"dnaid1315/ref/controls_3bc.csv"
+def analysis_test_data():
+    control1col = root/"analysis/controls_1col.csv.gz"
+    control2col = root / "analysis/controls_2col.csv.gz"
+    control3col = root / "analysis/controls_3col.csv.gz"
+    control2col_short = root / "analysis/controls_2col_short.csv.gz"
+    merged_counts = root/"analysis/example_mbarq_merged_counts.csv.gz"
+    sample_data = root/"analysis/example_sample_data.csv"
+    no_wt = root/"analysis/controls_3col_no_wt.csv.gz"
+    control3bc = root/"analysis/controls_3bc.csv.gz"
     return control1col,control2col,control3col,control2col_short,merged_counts,sample_data, no_wt, control3bc
 
-@pytest.fixture
-def dnaid1315_expected_outcomes():
-    return root/"dnaid1315/expected_outcomes"
 
 def capture(command_str):
     command = shlex.split(command_str)

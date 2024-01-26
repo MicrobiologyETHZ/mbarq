@@ -1,11 +1,26 @@
 from mbarq.mapper import Mapper, AnnotatedMap
-from mbarq.core import Barcode
 from collections import Counter
 from pathlib import Path
 import pandas as pd
-import pickle
-from test_utils import assert_files_are_same
-import numpy as np
+import shlex
+import subprocess
+
+
+
+def capture(command_str):
+    command = shlex.split(command_str)
+    proc = subprocess.Popen(command, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,)
+    out, err = proc.communicate()
+    return out, err, proc
+
+def assert_files_are_same(file1, file2, verbose=False):
+    cmd_str = f'cmp {file1} {file2}'
+    out, err, proc = capture(cmd_str)
+    if verbose:
+        print(out)
+        print(err)
+    assert proc.returncode == 0
 
 
 def test_extract_barcodes_tn5(tn5_structure, map_test_data, tmpdir):
