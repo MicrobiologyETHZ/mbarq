@@ -26,6 +26,7 @@ jobs:
       run: |
         conda install -c conda-forge mamba
         mamba env update --file mbarq_environment.yaml --name base
+        pip install .
     - name: Lint with flake8
       run: |
         conda install flake8
