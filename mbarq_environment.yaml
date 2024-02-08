@@ -5,7 +5,7 @@ channels:
   - defaults
 dependencies:
   - mageck
-  - python==3.8.*
+  - python>=3.8
   - blast==2.9.*
   - bedtools==2.30.*
   - biopython==1.79
