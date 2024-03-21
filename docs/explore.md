@@ -1,7 +1,7 @@
 # Explore
 
 
-[mBARq Web App](https://mbarq-app.herokuapp.com/) allows quick and easy interactive exploration of your BarSeq experiment. 
+[mBARq Web App](https://microbiomics.io/tools/mbarq-app/) allows quick and easy interactive exploration of your BarSeq experiment. 
 
 
 ## Visualise barcode positions across the genome
