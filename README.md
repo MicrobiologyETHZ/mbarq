@@ -5,7 +5,7 @@ The main steps of the workflow involve:
 1. Mapping each barcode to insertion location in the genome.
 2. Profiling barcode abundances across samples.
 3. Mutant fitness analyses.
-4. Exploratory analysis using [mBARq web app](https://mbarq-app.herokuapp.com/)
+4. Exploratory analysis using [mBARq web app]([https://mbarq-app.herokuapp.com/](https://microbiomics.io/tools/mbarq-app/))
 
 ## Installation:
 
@@ -62,7 +62,17 @@ mbarq analyze -i <count_file> -s <sample_data_file> -c <control_file> --treatmen
 
 ## Documentation and Walkthrough:
 
-Please see [mBARq documentation](https://mbarq.readthedocs.io/en/latest/) for detailed instructions and tutorials
+Please see [mBARq documentation](https://mbarq.readthedocs.io/en/latest/) for detailed instructions and tutorials.
+
+If you use mBARq, please cite:
+
+> **mBARq: a versatile and user-friendly framework for the analysis of DNA barcodes from transposon insertion libraries, knockout mutants, and isogenic strain populations**
+> 
+> Anna Sintsova, Hans-Joachim Ruscheweyh, Christopher M Field, Lilith Feer, Bidong D Nguyen, Benjamin Daniel, Wolf-Dietrich Hardt, Julia A Vorholt, Shinichi Sunagawa#
+> > 
+> _Bioinformatics_ (2024)
+> 
+> doi: [10.1093/bioinformatics/btae078](https://doi.org/10.1093/bioinformatics/btae078)
 
 ## Data and code to reproduce mBARq manuscript figures
 
