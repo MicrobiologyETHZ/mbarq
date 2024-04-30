@@ -29,7 +29,12 @@ class Mapper(BarSeqData):
         super().__init__(sequencing_file)
         self.barcode_structure = barcode_structure
         self.output_dir = Path(output_dir)
-        self.genome = shutil.copy(genome, self.output_dir/Path(genome).name) if Path(genome).is_file() else ''
+        self.genome = Path(genome)
+        if not self.genome.is_file():
+            self.genome = ''
+        elif not (self.output_dir/self.genome.name).is_file():
+            # Copying the genome file to the output directory, so that can clean up after blast, not the best way
+            self.genome = shutil.copy(self.genome, self.output_dir/self.genome.name)
         self.blastdb = ''
         self.name = name if name else Path(self.seq_file.strip('.gz')).stem
         self.temp_fasta_file = self.output_dir / f"{self.name}.fasta"
