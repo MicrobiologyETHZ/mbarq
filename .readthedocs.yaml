@@ -19,7 +19,7 @@ sphinx:
 python:
   install:
     - method: conda
-      environment: docs_env.yaml
+      path: docs_env.yaml
 
 # Build PDF & ePub
 formats:
