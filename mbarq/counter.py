@@ -123,7 +123,7 @@ class BarcodeCounter(BarSeqData):
                     self.logger.info(f'\tBarcodes processed:\t{processed_barcodes}')
                 for common_barcode in self.barcodes[:idx]:
                     if common_barcode.editdistance(rare_barcode) <= self.edit_distance:
-                        if rare_barcode.bc_seq in self.bc_annotations['barcode'].values:
+                        if rare_barcode.bc_seq in self.bc_annotations['barcode'].values and not common_barcode.bc_seq in self.bc_annotations['barcode'].values:
                             common_barcode.bc_seq = rare_barcode.bc_seq
                         common_barcode.count += rare_barcode.count
                         self.barcodes.remove(rare_barcode)
