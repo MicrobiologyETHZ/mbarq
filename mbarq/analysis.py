@@ -378,8 +378,57 @@ class Experiment:
             else:
                 self.logger.warning(f"No sufficient samples found for {contrast}")
         return contrasts_run
+    
+    @staticmethod
+    def pivot_to_wide(long_data, index_cols):
+        # Check if dataframe is empty
+        if long_data.empty:
+            print("Warning: DataFrame is empty")
+            return pd.DataFrame()
+        
+        # Ensure index_cols is a list
+        if isinstance(index_cols, str):
+            index_cols = [index_cols]
+        
+        # Check if required columns exist (index_cols + contrast)
+        required_cols = index_cols + ['contrast']
+        missing_cols = [col for col in required_cols if col not in long_data.columns]
+        if missing_cols:
+            raise ValueError(f"Missing required columns: {missing_cols}")
+        
+        try:
+            # Pivot the data
+            wide_data = long_data.pivot(index=index_cols, columns='contrast')
+            
+            # Handle case where pivot results in empty dataframe
+            if wide_data.empty:
+                print("Warning: Pivot resulted in empty DataFrame")
+                return pd.DataFrame()
+            
+            # Sort columns by contrast values
+            wide_data = wide_data[sorted(wide_data.columns, key=lambda x: x[1])]
+            
+            # Flatten column names
+            wide_data.columns = [f"{c[0]}_{c[1]}" for c in wide_data.columns]
+            
+            # Reset index
+            wide_data = wide_data.reset_index()
+            
+            return wide_data
+            
+        except ValueError as e:
+            if "Index contains duplicate entries" in str(e):
+                print(f"Error: Duplicate combinations found in index columns + contrast")
+                print("Consider using pivot_table with an aggregation function instead")
+            else:
+                print(f"Pivot error: {e}")
+            return pd.DataFrame()
+        
+        except Exception as e:
+            print(f"Unexpected error during pivot: {e}")
+            return pd.DataFrame()
 
-    def process_results(self, contrasts_run=()):
+    def process_results(self, contrasts_run=(), format='long'):
         self.logger.info('Writing out final results.')
         if not contrasts_run:
             contrasts_run = self.sd.contrasts
@@ -396,11 +445,20 @@ class Experiment:
         fres = res[['id', 'num', 'neg|lfc', 'neg|fdr', 'pos|fdr', 'contrast']]
         fres.columns = [self.gene_column, 'number_of_barcodes', 'LFC', 'neg_selection_fdr', 'pos_selection_fdr',
                         'contrast']
+        # Insert pivot to wide if desired
+        if format == 'long':
+            self.logger.info("Saving output data in long format")
+        elif format == 'wide':
+            self.logger.info("Saving output data in wide format")
+            bc_res = self.pivot_to_wide(bc_res, ['barcode', 'Name'])
+            fres = self.pivot_to_wide(fres, [self.gene_column, 'number_of_barcodes'])
+        else:
+            self.logger.info("Unknown format. Saving output data in long format")
         fres.to_csv(self.output_dir / f'{self.name}_rra_results.csv', index=False)
         bc_res.to_csv(self.output_dir / f'{self.name}_barcodes_results.csv', index=False)
 
 
-    def run_experiment(self, normalize_by='', filter_low_counts=0):
+    def run_experiment(self, normalize_by='', filter_low_counts=0, format='long'):
         self.logger.info("Identifying samples")
         self._get_good_samples()
         self.logger.info("Preparing dataset")
@@ -411,4 +469,4 @@ class Experiment:
         if len(self.cbars.wt_barcodes) > 0:
             self.write_control_barcodes_to_file()
         contrasts_run = self.run_all_contrasts(normalize_by=normalize_by, filter_low_counts=filter_low_counts)
-        self.process_results(contrasts_run)
+        self.process_results(contrasts_run, format=format)

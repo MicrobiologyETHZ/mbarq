@@ -243,13 +243,14 @@ def merge(input_files, count_dir, name, attribute, out_dir, annotated_only):
                                                 'by default will use control barcodes if provided, otherwise median', metavar='STR')
 @click.option('--filter_low_counts', default=0, help='filter out barcodes with < N reads across all conditions, '
                                                 'if more than N samples, < number of samples', metavar='INT')
+@click.option('--format', '-f',  default='long', help='output file format, long or wide [long]', metavar='STR')
 
 def analyze(count_file, sample_data, gene_name, control_file, name,
-            treatment_column, baseline, out_dir, norm_method, filter_low_counts):
+            treatment_column, baseline, out_dir, norm_method, filter_low_counts, format):
     batch_column = ''
     exp = Experiment(count_file, sample_data, control_file, name, gene_name, treatment_column,
                      baseline, batch_column, 0.8, out_dir)
-    exp.run_experiment(normalize_by=norm_method, filter_low_counts=filter_low_counts)
+    exp.run_experiment(normalize_by=norm_method, filter_low_counts=filter_low_counts, format=format)
 
 
 if __name__ == "__main__":

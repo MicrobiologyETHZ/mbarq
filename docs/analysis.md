@@ -48,19 +48,50 @@
 - ``mbarq_merged_counts_batch.txt``: Information on sample and batch
 - ``mbarq_merged_counts.correlations.csv``: Correlation for each batch
 - ``mbarq_merged_counts_rra_results.csv``: Information for each gene about number of barcodes, LFC and false discovery rate
+- ``mbarq_merged_counts_barcodes_results.csv``: Information for each barcode about LFC and significance scores
 
 For each comparison:
 - ``mbarq_merged_counts_cond1_vs_cond0.gene_summary.txt``: Summary for each gene
 - ``mbarq_merged_counts_cond1_vs_cond0.report.Rmd``: MAGeCK Comparison Report
 - ``mbarq_merged_counts_cond1_vs_cond0.sgrna_summary.txt``: Summary for each sgRNA
 
+**Output Format Options**
+
+The final results can be output in two formats:
+
+- **Long format (default)**: Each row represents a gene-treatment combination. This format includes a 'contrast' column indicating the treatment condition.
+- **Wide format**: Each row represents a gene, with separate columns for each treatment condition (e.g., 'LFC_d1', 'LFC_d2'). This format is useful for downstream analysis and visualization.
+
+Use the `--format` option to specify the desired output format.
+
+**Format Examples:**
+
+*Long format (default):*
+| Name | number_of_barcodes | LFC | neg_selection_fdr | pos_selection_fdr | contrast |
+|------|-------------------|-----|------------------|------------------|----------|
+| geneA | 3 | 1.2 | 0.05 | 0.9 | d1 |
+| geneA | 3 | 1.5 | 0.03 | 0.8 | d2 |
+| geneB | 2 | -0.8 | 0.8 | 0.1 | d1 |
+| geneB | 2 | -0.9 | 0.7 | 0.2 | d2 |
+
+*Wide format:*
+| Name | number_of_barcodes | LFC_d1 | LFC_d2 | neg_selection_fdr_d1 | neg_selection_fdr_d2 | pos_selection_fdr_d1 | pos_selection_fdr_d2 |
+|------|-------------------|--------|--------|---------------------|---------------------|---------------------|---------------------|
+| geneA | 3 | 1.2 | 1.5 | 0.05 | 0.03 | 0.9 | 0.8 |
+| geneB | 2 | -0.8 | -0.9 | 0.8 | 0.7 | 0.1 | 0.2 |
+
 
 ### Example Usage
 
 ```bash 
 
+# Basic usage with long format output (default)
 mbarq analyze -i <count_file> -s <sample_data_file> -c <control_file> \ 
---treatment_column treatment --batch_column batch --baseline control 
+--treatment_column treatment --baseline control 
+
+# Output results in wide format
+mbarq analyze -i <count_file> -s <sample_data_file> -c <control_file> \ 
+--treatment_column treatment --baseline control --format wide
 
 ```
 
@@ -83,6 +114,12 @@ Options:
   -n, --name STR           experiment name, by default will try to use count
                            file name
   -o, --out_dir DIR        Output directory
+  --norm_method STR        mageck normalization method: median, total, or 
+                           control. By default will use control barcodes if 
+                           provided, otherwise median
+  --filter_low_counts INT  filter out barcodes with < N reads across all 
+                           conditions [0]
+  -f, --format STR         output file format: long or wide [long]
   -h, --help               Show this message and exit.
 
 ```
