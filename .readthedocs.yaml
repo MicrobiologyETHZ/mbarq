@@ -5,16 +5,15 @@
 # Required
 version: 2
 
-# Set the OS, Python version and other tools you might need
+# Set the OS (required for v2)
 build:
   os: ubuntu-22.04
-  tools:
-    python: "3.9"
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
    configuration: docs/conf.py
 
+# Use conda environment (Python version specified in docs_env.yaml)
 conda:
   environment: docs_env.yaml
 
