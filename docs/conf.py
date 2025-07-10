@@ -23,10 +23,6 @@ author = 'Sunagawa Group'
 import sys
 import os
 sys.path.insert(0, os.path.abspath('..'))
-import mock
-MOCK_MODULES = []
-for mod_name in MOCK_MODULES:
-    sys.modules[mod_name] = mock.Mock()
 
 # The short X.Y version
 version = '1.0'
