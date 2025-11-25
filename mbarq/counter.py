@@ -131,6 +131,23 @@ class BarcodeCounter(BarSeqData):
             self.merged = True
         self.barcode_counter = collections.Counter({barcode.bc_seq: barcode.count for barcode in self.barcodes})
 
+    def _match_barcodes_with_distance(self):
+        expected_barcodes = self.bc_annotations['barcode'].tolist()
+        annotations = {eb: [] for eb in expected_barcodes}
+        for eb in expected_barcodes:
+            for bc in self.barcodes:
+                if bc.editdistance(Barcode(sequence=eb)) <= self.edit_distance:
+                    annotations[eb].append(bc.bc_seq)
+        df = (pd.DataFrame(list(annotations.items()), 
+                           columns=['ref_barcode', 'matched_barcodes'])
+                .explode('matched_barcodes')
+                .dropna()
+                .reset_index(drop=True)
+                .merge(self.bc_annotations, left_on='ref_barcode', right_on='barcode', how='left')
+                .drop('barcode', axis=1)
+                .rename(columns={'matched_barcodes': 'barcode'}))
+        return df[list(self.bc_annotations.columns) + ['ref_barcode']]
+
     def _annotate_barcodes(self, filter_low=False, annotated_only=False) -> None:
         """
         If annotation is available, annotate the counted barcodes
@@ -156,6 +173,8 @@ class BarcodeCounter(BarSeqData):
             self.logger.info(f'Annotating barcodes')
             self.logger.info(f'Columns found in the mapping/annotations file: '
                              f'{", ".join(self.bc_annotations.columns)}')
+            if self.edit_distance > 0:
+                self.bc_annotations = self._match_barcodes_with_distance()
             merge_strategy = 'inner' if annotated_only else 'left'
             self.annotated_cnts = cnts_df.merge(self.bc_annotations, how=merge_strategy, on='barcode').drop_duplicates()
             filter_col = self.bc_annotations.columns[1]

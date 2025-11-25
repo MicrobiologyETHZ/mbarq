@@ -75,7 +75,7 @@ def test_annotate_barcodes(count_test_data, tn5_structure, tmpdir):
     seq_data._annotate_barcodes(filter_low=3)
     expected_counts = pd.DataFrame({'barcode': {0: 'AACAAGACCGAAATGCG'}, 'barcode_count': {0: 4}, 'chr': {0: 'HE654725.1'}, 'insertion_site': {0: 70268}, 'abundance_in_mapping_library': {0: 11044}, 'gene_start': {
                                    0: 70132}, 'gene_end': {0: 70383}, 'gene_strand': {0: '+'}, 'ID': {0: 'gene-SL1344_P2_0081'}, 'Name': {0: 'shfB'}, 'locus_tag': {0: 'SL1344_P2_0081'}, 'distance_to_feature': {0: 0}, 'percentile': {0: 0.54}})
-    assert (expected_counts.equals(seq_data.annotated_cnts))
+    assert (expected_counts.equals(seq_data.annotated_cnts.drop(columns=['ref_barcode'])))
 
 
 # todo same without filtering low counts
@@ -92,7 +92,7 @@ def test_count_barcodes(count_test_data, tn5_structure, tmpdir):
 
     expected_counts = pd.DataFrame({'barcode': {0: 'AACAAGACCGAAATGCG'}, 'barcode_count': {0: 4}, 'chr': {0: 'HE654725.1'}, 'insertion_site': {0: 70268}, 'abundance_in_mapping_library': {0: 11044}, 'gene_start': {
                                    0: 70132}, 'gene_end': {0: 70383}, 'gene_strand': {0: '+'}, 'ID': {0: 'gene-SL1344_P2_0081'}, 'Name': {0: 'shfB'}, 'locus_tag': {0: 'SL1344_P2_0081'}, 'distance_to_feature': {0: 0}, 'percentile': {0: 0.54}})
-    assert (expected_counts.equals(seq_data.annotated_cnts))
+    assert (expected_counts.equals(seq_data.annotated_cnts.drop(columns=['ref_barcode'])))
 
 
 # def test_count_barcodes_wish(wish_structure, count_test_data_wish, tmpdir):
