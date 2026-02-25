@@ -2,19 +2,19 @@ name: mbarq
 channels:
   - bioconda
   - conda-forge
-  - defaults
 dependencies:
   - mageck
-  - python>=3.8
+  - python==3.10
   - blast==2.9.*
   - bedtools==2.30.*
   - biopython==1.79
-  - numpy=1.22
+  - numpy
   - pandas
   - pytest
   - click
-  - pip
   - pandera
   - pyranges==0.0.117
   - pybedtools == 0.9.0
+  - setuptools<=70
+  - pip
 
