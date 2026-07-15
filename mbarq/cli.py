@@ -96,16 +96,21 @@ def demux(input_file, demux_file, out_dir, rc, name):
               help='for barcodes not directly overlapping a feature, report the closest feature [False]')
 @click.option('--no_blast',  is_flag=True,
               help='do not re-run blast [False]')
+@click.option('--report_multimappers',  is_flag=True,
+              help='write barcodes flagged as multimappers and all their candidate '
+                   'positions to {name}.multimappers.csv [False]')
 @click.option('--rev_complement',  is_flag=True,
               help='Add reverse complements of barcodes to the map file [False]')
 @click.option('--edit_distance',  '-e', default=3,
               help='Will merge barcodes with edit distnace <= [INT] [3]', metavar="INT")
 def map(forward, gff, name, transposon, out_dir, genome, filter_low_counts,
-        feat_type, attributes, closest_gene, blast_threads, no_blast, rev_complement, edit_distance):
+        feat_type, attributes, closest_gene, blast_threads, no_blast, report_multimappers,
+        rev_complement, edit_distance):
     identifiers = tuple(attributes.split(','))
     mapper = Mapper(forward, transposon, genome=genome, name=name, output_dir=out_dir,
                     edit_distance=edit_distance)
-    mapper.map_insertions(filter_below=filter_low_counts, blast_threads=blast_threads, no_blast=no_blast)
+    mapper.map_insertions(filter_below=filter_low_counts, blast_threads=blast_threads, no_blast=no_blast,
+                          report_multimappers=report_multimappers)
     if gff:
         annotated_map = AnnotatedMap(map_file=mapper.map_file, annotation_file=gff,
                                      feature_type=feat_type,

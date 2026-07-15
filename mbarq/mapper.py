@@ -40,6 +40,8 @@ class Mapper(BarSeqData):
         self.temp_fasta_file = self.output_dir / f"{self.name}.fasta"
         self.temp_blastn_file = self.output_dir / f"{self.name}.blastn"
         self.map_file: Path = self.output_dir / f"{self.name}.map.csv"
+        self.multimap_file: Path = self.output_dir / f"{self.name}.multimappers.csv"
+        self.multimappers: pd.DataFrame = pd.DataFrame()
         self.blast_columns: str = "qseqid sseqid pident length qstart qend sstart send evalue bitscore qseq sstrand"
         self.positions: pd.DataFrame = pd.DataFrame()
         self.edit_distance: int = edit_distance
@@ -231,6 +233,12 @@ class Mapper(BarSeqData):
                                             & (total_counts.total_count > filter_below)]
                                .barcode.nunique())
         self.logger.info(f"Estimated # of multimappers removed: {likely_multimappers}")
+        # Capture (rather than discard) the flagged multimapper barcodes and all their positions
+        multimapper_mask = ((total_counts['prop_read_per_position'] < perc_primary_location)
+                            & (total_counts.total_count > filter_below))
+        multimapper_barcodes = total_counts.loc[multimapper_mask, 'barcode'].unique()
+        self.multimappers = total_counts[total_counts.barcode.isin(multimapper_barcodes)][
+            ['barcode', 'sseqid', 'insertion_site', 'sstrand', 'total_count', 'prop_read_per_position']].copy()
         self.logger.info(f"Filtering out barcodes supported by less than {filter_below} reads")
         likely_positions = likely_positions[likely_positions.total_count > filter_below]
         self.positions = likely_positions[
@@ -292,12 +300,13 @@ class Mapper(BarSeqData):
         self.logger.info(f"Mean number of reads per barcode: {self.positions.total_count.mean()}")
 
     def map_insertions(self, min_host_bases: int = 20, filter_below: int = 100, blast_threads: int =4,
-                       no_blast: bool = False):
+                       no_blast: bool = False, report_multimappers: bool = False):
 
         """
         :param min_host_bases: Minimal length of host sequence to consider
         :param filter_below: Read count threshold for keeping barcodes
         :param no_blast: Whether to run the blast command or not
+        :param report_multimappers: Whether to write flagged multimapper barcodes and their positions to a separate file
         0. If no_blast == True, look for existing blast output file.
         1. Else Extract barcodes from the sequencing file using `extract_barcodes`, write barcode to fasta, blast each host sequence agains the genome
         2. Find most likely positions
@@ -322,6 +331,10 @@ class Mapper(BarSeqData):
         self.positions = self.positions.rename(rename_dict, axis=1)
         self.logger.info('Writing transposon insertion sites to file')
         self.positions.to_csv(self.map_file, index=False)
+        if report_multimappers:
+            self.logger.info(f"Writing multimapping barcodes to {self.multimap_file}")
+            self.multimappers.rename({'sseqid': 'chr', 'sstrand': 'strand'}, axis=1).to_csv(
+                self.multimap_file, index=False)
         self.logger.info("Removing intermediate files")
         os.remove(self.temp_fasta_file)
         os.remove(self.temp_blastn_file)
